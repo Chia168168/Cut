@@ -7,14 +7,22 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
+            line-height: 1.6;
         }
         h1 {
             color: #333;
             text-align: center;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #444;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            margin-top: 30px;
         }
         #imageInput {
             display: block;
@@ -23,6 +31,8 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             background-color: white;
+            width: 80%;
+            max-width: 400px;
         }
         .controls {
             display: flex;
@@ -39,6 +49,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            transition: background-color 0.3s;
         }
         button:hover {
             background-color: #45a049;
@@ -53,17 +64,21 @@
             background-color: #cccccc;
             cursor: not-allowed;
         }
-        .ratio-selector {
+        .ratio-selector, .format-selector, .size-input {
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 16px;
+            margin: 5px;
+        }
+        .size-input {
+            width: 80px;
         }
         .container {
             background-color: white;
-            padding: 20px;
+            padding: 25px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
         #resultContainer {
@@ -74,52 +89,164 @@
             border: 1px solid #ddd;
             margin-top: 10px;
             background-color: #f9f9f9;
+            max-width: 100%;
+        }
+        .settings-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        .setting-group {
+            margin-bottom: 15px;
+        }
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .quality-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .quality-value {
+            text-align: center;
+            font-weight: bold;
+            color: #008CBA;
+        }
+        .dimension-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .lock-aspect {
+            background: #eee;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .lock-aspect.active {
+            background: #008CBA;
+            color: white;
+        }
+        @media (max-width: 768px) {
+            .settings-panel {
+                grid-template-columns: 1fr;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            button {
+                width: 100%;
+                max-width: 300px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>網頁圖片裁切工具 v1.0</h1>
-        <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
+        <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif,image/webp">
+        
+        <div class="settings-panel">
+            <div class="setting-group">
+                <label for="ratioSelect">裁切比例</label>
+                <select id="ratioSelect" class="ratio-selector">
+                    <option value="0">自訂比例</option>
+                    <option value="1" selected>1:1 (正方形)</option>
+                    <option value="2">16:9 (橫幅)</option>
+                    <option value="3">9:16 (直幅)</option>
+                    <option value="4">4:3 (標準)</option>
+                    <option value="5">3:4 (肖像)</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="widthInput">輸出寬度 (px)</label>
+                <input type="number" id="widthInput" class="size-input" value="300" min="50" max="4000">
+            </div>
+            
+            <div class="setting-group">
+                <label for="heightInput">輸出高度 (px)</label>
+                <div class="dimension-inputs">
+                    <input type="number" id="heightInput" class="size-input" value="300" min="50" max="4000">
+                    <div id="lockAspect" class="lock-aspect" title="鎖定比例">🔒</div>
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <label for="formatSelect">輸出格式</label>
+                <select id="formatSelect" class="format-selector">
+                    <option value="png">PNG</option>
+                    <option value="jpeg" selected>JPEG</option>
+                    <option value="webp">WebP</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="qualitySlider">輸出品質: <span id="qualityValue" class="quality-value">90%</span></label>
+                <input type="range" id="qualitySlider" class="quality-slider" min="10" max="100" value="90">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #777;">
+                    <span>低</span>
+                    <span>高</span>
+                </div>
+            </div>
+        </div>
         
         <div class="controls">
-            <select id="ratioSelect" class="ratio-selector">
-                <option value="0">自訂比例</option>
-                <option value="1" selected>1:1 (正方形)</option>
-                <option value="2">16:9 (橫幅)</option>
-                <option value="3">9:16 (直幅)</option>
-                <option value="4">4:3 (標準)</option>
-                <option value="5">3:4 (肖像)</option>
-            </select>
             <button onclick="cropImage()">裁切圖片</button>
             <button id="downloadBtn" onclick="downloadImage()" disabled>下載裁切圖片</button>
         </div>
         
         <div>
             <p>上傳圖片後，拖曳滑鼠或手指來選取區域</p>
-            <img id="image" style="max-width: 100%;">
+            <img id="image" style="max-width: 100%; display: block; margin: 0 auto;">
         </div>
     </div>
     
     <div class="container">
         <h2>裁切結果</h2>
         <div id="resultContainer">
-            <canvas id="result" style="max-width: 100%;"></canvas>
+            <canvas id="result"></canvas>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
         let cropper = null;
-        let currentImageUrl = null; // 儲存當前圖片的 ObjectURL
-        let croppedImageDataUrl = null; // 儲存裁切後的圖片數據
+        let currentImageUrl = null;
+        let croppedImageDataUrl = null;
+        let isAspectLocked = false;
+        let originalAspectRatio = 1;
+        
         const input = document.getElementById('imageInput');
         const image = document.getElementById('image');
         const resultCanvas = document.getElementById('result');
         const downloadBtn = document.getElementById('downloadBtn');
         const ratioSelect = document.getElementById('ratioSelect');
+        const widthInput = document.getElementById('widthInput');
+        const heightInput = document.getElementById('heightInput');
+        const formatSelect = document.getElementById('formatSelect');
+        const qualitySlider = document.getElementById('qualitySlider');
+        const qualityValue = document.getElementById('qualityValue');
+        const lockAspect = document.getElementById('lockAspect');
 
-        input.addEventListener('change', (event) => {
+        // 初始化
+        input.addEventListener('change', handleImageUpload);
+        ratioSelect.addEventListener('change', updateAspectRatio);
+        widthInput.addEventListener('input', updateHeightFromWidth);
+        heightInput.addEventListener('input', updateWidthFromHeight);
+        qualitySlider.addEventListener('input', updateQualityValue);
+        lockAspect.addEventListener('click', toggleAspectLock);
+
+        function handleImageUpload(event) {
             const file = event.target.files[0];
             if (file) {
                 // 釋放之前的 ObjectURL
@@ -138,11 +265,12 @@
 
                 // 初始化新的 Cropper 實例
                 cropper = new Cropper(image, {
-                    aspectRatio: getAspectRatio(), // 根據選擇設置比例
+                    aspectRatio: getAspectRatio(),
                     viewMode: 1,
                     ready: () => {
-                        // 確保裁切框就緒
                         console.log('Cropper 已初始化');
+                        // 儲存原始比例
+                        originalAspectRatio = getAspectRatio() || (cropper.getCropBoxData().width / cropper.getCropBoxData().height);
                     }
                 });
 
@@ -156,30 +284,68 @@
             } else {
                 alert('請選擇有效的圖片檔案');
             }
-        });
+        }
 
-        // 比例選擇變化時更新裁切框
-        ratioSelect.addEventListener('change', function() {
+        function updateAspectRatio() {
             if (cropper) {
                 const ratio = getAspectRatio();
-                if (ratio === 0) {
-                    cropper.setAspectRatio(ratio); // 自訂比例
+                cropper.setAspectRatio(ratio);
+                
+                // 更新鎖定狀態
+                if (ratio !== 0 && ratio !== NaN) {
+                    isAspectLocked = true;
+                    lockAspect.classList.add('active');
+                    originalAspectRatio = ratio;
                 } else {
-                    cropper.setAspectRatio(ratio);
+                    isAspectLocked = false;
+                    lockAspect.classList.remove('active');
                 }
             }
-        });
+        }
 
-        // 根據選擇獲取比例值
         function getAspectRatio() {
             const ratioValue = ratioSelect.value;
             switch(ratioValue) {
-                case '1': return 1; // 1:1
-                case '2': return 16/9; // 16:9
-                case '3': return 9/16; // 9:16
-                case '4': return 4/3; // 4:3
-                case '5': return 3/4; // 3:4
-                default: return NaN; // 自訂比例
+                case '1': return 1;
+                case '2': return 16/9;
+                case '3': return 9/16;
+                case '4': return 4/3;
+                case '5': return 3/4;
+                default: return NaN;
+            }
+        }
+
+        function updateHeightFromWidth() {
+            if (isAspectLocked && originalAspectRatio) {
+                const width = parseInt(widthInput.value);
+                const height = Math.round(width / originalAspectRatio);
+                heightInput.value = height;
+            }
+        }
+
+        function updateWidthFromHeight() {
+            if (isAspectLocked && originalAspectRatio) {
+                const height = parseInt(heightInput.value);
+                const width = Math.round(height * originalAspectRatio);
+                widthInput.value = width;
+            }
+        }
+
+        function updateQualityValue() {
+            qualityValue.textContent = `${qualitySlider.value}%`;
+        }
+
+        function toggleAspectLock() {
+            isAspectLocked = !isAspectLocked;
+            lockAspect.classList.toggle('active', isAspectLocked);
+            
+            if (isAspectLocked) {
+                // 使用當前裁切框的比例
+                if (cropper) {
+                    const cropBoxData = cropper.getCropBoxData();
+                    originalAspectRatio = cropBoxData.width / cropBoxData.height;
+                    updateHeightFromWidth();
+                }
             }
         }
 
@@ -189,10 +355,16 @@
                 return;
             }
 
+            // 獲取輸出尺寸
+            const outputWidth = parseInt(widthInput.value) || 300;
+            const outputHeight = parseInt(heightInput.value) || 300;
+
             // 獲取裁切後的畫布
             const croppedCanvas = cropper.getCroppedCanvas({
-                width: 300, // 可調整輸出尺寸
-                height: 300,
+                width: outputWidth,
+                height: outputHeight,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high'
             });
 
             if (croppedCanvas) {
@@ -203,11 +375,17 @@
                 context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
                 context.drawImage(croppedCanvas, 0, 0);
                 
-                // 儲存裁切後的圖片數據以供下載
-                croppedImageDataUrl = croppedCanvas.toDataURL('image/png');
+                // 根據選擇的格式和品質儲存圖片數據
+                const format = formatSelect.value;
+                const quality = parseInt(qualitySlider.value) / 100;
                 
-                // 啟用下載按鈕
-                downloadBtn.disabled = false;
+                try {
+                    croppedImageDataUrl = croppedCanvas.toDataURL(`image/${format}`, quality);
+                    downloadBtn.disabled = false;
+                } catch (e) {
+                    alert('不支援的圖片格式，請選擇其他格式');
+                    console.error(e);
+                }
             } else {
                 alert('裁切失敗，請重新選取區域');
             }
@@ -219,16 +397,23 @@
                 return;
             }
             
+            // 獲取格式和檔案擴展名
+            const format = formatSelect.value;
+            const extension = format === 'jpeg' ? 'jpg' : format;
+            
             // 創建下載鏈接
             const downloadLink = document.createElement('a');
             downloadLink.href = croppedImageDataUrl;
-            downloadLink.download = 'cropped-image.png';
+            downloadLink.download = `cropped-image.${extension}`;
             
             // 模擬點擊下載鏈接
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
         }
+
+        // 初始化品質顯示
+        updateQualityValue();
     </script>
 </body>
 </html>
