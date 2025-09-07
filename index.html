@@ -34,7 +34,6 @@
             cursor: pointer;
             width: 80%;
             max-width: 300px;
-            touch-action: manipulation;
         }
         #cropButton:disabled {
             background-color: #6c757d;
@@ -42,11 +41,6 @@
         }
         #cropButton:hover:not(:disabled) {
             background-color: #218838;
-        }
-        #imageContainer {
-            max-width: 100%;
-            overflow: hidden;
-            margin: 20px 0;
         }
         #image {
             max-width: 100%;
@@ -63,27 +57,15 @@
             text-align: center;
             font-size: 1.1em;
         }
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 1.5em;
-            }
-            #cropButton {
-                padding: 12px 20px;
-                font-size: 1.2em;
-            }
-            #imageInput {
-                font-size: 1em;
-            }
-        }
     </style>
 </head>
 <body>
     <h1>網頁圖片裁切工具</h1>
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
     <button id="cropButton" onclick="cropImage()">裁切圖片</button>
-    <div id="imageContainer">
+    <div>
         <p>上傳圖片後，拖曳滑鼠或手指來選取區域</p>
-        <img id="image" src="">
+        <img id="image" style="max-width: 100%;">
     </div>
     <h2>裁切結果</h2>
     <canvas id="result"></canvas>
@@ -105,7 +87,6 @@
                 return;
             }
 
-            // 禁用按鈕，顯示處理中
             cropButton.disabled = true;
             cropButton.textContent = '處理中...';
 
@@ -127,7 +108,7 @@
                 heic2any({
                     blob: file,
                     toType: 'image/jpeg',
-                    quality: 0.8 // 調整品質以減少檔案大小
+                    quality: 0.7 // 降低品質以提高轉換效率
                 })
                     .then((convertedBlob) => {
                         currentImageUrl = URL.createObjectURL(convertedBlob);
@@ -155,12 +136,6 @@
             cropper = new Cropper(image, {
                 aspectRatio: 1,
                 viewMode: 1,
-                movable: true,
-                zoomable: true,
-                scalable: true,
-                touchDragZoom: true,
-                cropBoxMovable: true,
-                cropBoxResizable: true,
                 ready: () => {
                     console.log('Cropper 初始化完成');
                 }
