@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>網頁圖片裁切工具 - 修復版</title>
+    <title>圖片裁切工具 - 預覽修復版</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <style>
         * {
@@ -164,7 +164,7 @@
             max-width: 100%;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            display: none; /* 初始隐藏 */
+            display: none;
             margin: 0 auto;
         }
         
@@ -268,8 +268,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>網頁圖片裁切工具</h1>
-            <p class="subtitle">修復版 - 裁切結果正常顯示</p>
+            <h1>圖片裁切工具</h1>
+            <p class="subtitle">預覽修復版 - 確保圖片正常顯示</p>
         </header>
         
         <div class="instructions">
@@ -363,7 +363,7 @@
             // 創建新圖片的URL
             currentImageUrl = URL.createObjectURL(file);
             
-            // 設置圖片源
+            // 設置圖片源 - 這是關鍵修復部分
             image.onload = function() {
                 initCropper();
                 updateStatus('圖片載入成功！請調整裁切區域', 'success');
@@ -381,6 +381,7 @@
                 loader.style.display = 'none';
             };
             
+            // 這是最重要的部分 - 設置src屬性
             image.src = currentImageUrl;
         }
         
