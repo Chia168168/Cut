@@ -24,9 +24,14 @@
             border-radius: 4px;
             background-color: white;
         }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
         button {
-            display: block;
-            margin: 10px auto;
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -47,6 +52,12 @@
         #downloadBtn:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
+        }
+        .ratio-selector {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
         }
         .container {
             background-color: white;
@@ -70,8 +81,20 @@
     <div class="container">
         <h1>網頁圖片裁切工具 v1.0</h1>
         <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
-        <button onclick="cropImage()">裁切圖片</button>
-        <button id="downloadBtn" onclick="downloadImage()" disabled>下載裁切圖片</button>
+        
+        <div class="controls">
+            <select id="ratioSelect" class="ratio-selector">
+                <option value="0">自訂比例</option>
+                <option value="1" selected>1:1 (正方形)</option>
+                <option value="2">16:9 (橫幅)</option>
+                <option value="3">9:16 (直幅)</option>
+                <option value="4">4:3 (標準)</option>
+                <option value="5">3:4 (肖像)</option>
+            </select>
+            <button onclick="cropImage()">裁切圖片</button>
+            <button id="downloadBtn" onclick="downloadImage()" disabled>下載裁切圖片</button>
+        </div>
+        
         <div>
             <p>上傳圖片後，拖曳滑鼠或手指來選取區域</p>
             <img id="image" style="max-width: 100%;">
@@ -94,6 +117,7 @@
         const image = document.getElementById('image');
         const resultCanvas = document.getElementById('result');
         const downloadBtn = document.getElementById('downloadBtn');
+        const ratioSelect = document.getElementById('ratioSelect');
 
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -114,7 +138,7 @@
 
                 // 初始化新的 Cropper 實例
                 cropper = new Cropper(image, {
-                    aspectRatio: 1, // 可根據需求調整比例
+                    aspectRatio: getAspectRatio(), // 根據選擇設置比例
                     viewMode: 1,
                     ready: () => {
                         // 確保裁切框就緒
@@ -133,6 +157,31 @@
                 alert('請選擇有效的圖片檔案');
             }
         });
+
+        // 比例選擇變化時更新裁切框
+        ratioSelect.addEventListener('change', function() {
+            if (cropper) {
+                const ratio = getAspectRatio();
+                if (ratio === 0) {
+                    cropper.setAspectRatio(ratio); // 自訂比例
+                } else {
+                    cropper.setAspectRatio(ratio);
+                }
+            }
+        });
+
+        // 根據選擇獲取比例值
+        function getAspectRatio() {
+            const ratioValue = ratioSelect.value;
+            switch(ratioValue) {
+                case '1': return 1; // 1:1
+                case '2': return 16/9; // 16:9
+                case '3': return 9/16; // 9:16
+                case '4': return 4/3; // 4:3
+                case '5': return 3/4; // 3:4
+                default: return NaN; // 自訂比例
+            }
+        }
 
         function cropImage() {
             if (!cropper) {
