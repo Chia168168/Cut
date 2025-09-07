@@ -132,10 +132,21 @@
         let cropperRect = {};
         const isMobile = 'ontouchstart' in window;
         
-        let decoder = new LibheifWrapper.HeifDecoder();
+        let decoder = null;
+        try {
+            decoder = new LibheifWrapper.HeifDecoder();
+            console.log('Libheif-js decoder initialized successfully.');
+        } catch (e) {
+            console.error('Failed to initialize Libheif-js:', e);
+            alert('HEIC/HEIF 支援庫初始化失敗。請檢查您的網路或瀏覽器。');
+        }
 
         function handleFile(file) {
-            if (!file) return;
+            if (!file) {
+                console.warn('No file selected.');
+                return;
+            }
+            console.log(`File selected: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
 
             // 重置狀態
             mainImage.style.display = 'none';
@@ -144,15 +155,20 @@
             croppedImageContainer.style.display = 'none';
             originalImage = null;
             dragInfo.style.display = 'flex';
-            
+
             const reader = new FileReader();
 
-            // HEIC/HEIF 處理
             if (file.type === 'image/heic' || file.type === 'image/heif') {
+                console.log('Processing HEIC/HEIF file...');
                 reader.onload = (e) => {
                     const buffer = e.target.result;
+                    if (!decoder) {
+                        alert('HEIC/HEIF 解碼器未初始化。');
+                        return;
+                    }
                     try {
                         const primaryImage = decoder.decode(buffer);
+                        console.log(`HEIC/HEIF decoded. Dimensions: ${primaryImage.width}x${primaryImage.height}`);
                         const imageBlob = new Blob([primaryImage.data], { type: 'image/jpeg' });
                         const imageUrl = URL.createObjectURL(imageBlob);
 
@@ -162,11 +178,14 @@
                             mainImage.style.display = 'block';
                             cropButton.disabled = false;
                             dragInfo.style.display = 'none';
+                            console.log('HEIC/HEIF image displayed successfully.');
                             URL.revokeObjectURL(imageUrl); // 釋放記憶體
                         };
                         originalImage.onerror = () => {
                             alert('HEIC 圖片載入失敗，可能檔案已損壞或格式不受支援。');
+                            console.error('Image onload error for HEIC/HEIF.');
                             URL.revokeObjectURL(imageUrl);
+                            dragInfo.style.display = 'flex';
                         };
                         originalImage.src = imageUrl;
                     } catch (err) {
@@ -177,16 +196,22 @@
                 };
                 reader.readAsArrayBuffer(file);
             } else {
-                // 其他圖片格式處理
+                console.log('Processing standard image file...');
                 reader.onload = (event) => {
                     originalImage = new Image();
-                    originalImage.src = event.target.result;
                     originalImage.onload = () => {
                         mainImage.src = originalImage.src;
                         mainImage.style.display = 'block';
                         cropButton.disabled = false;
                         dragInfo.style.display = 'none';
+                        console.log('Standard image displayed successfully.');
                     };
+                    originalImage.onerror = () => {
+                        alert('圖片載入失敗，可能檔案已損壞。');
+                        console.error('Image onload error for standard image.');
+                        dragInfo.style.display = 'flex';
+                    };
+                    originalImage.src = event.target.result;
                 };
                 reader.readAsDataURL(file);
             }
@@ -209,7 +234,6 @@
 
         container.addEventListener(isMobile ? 'touchstart' : 'mousedown', (e) => {
             if (!originalImage || mainImage.style.display !== 'block') return;
-            
             isDragging = true;
             const coords = getCoords(e);
             startX = coords.x;
@@ -224,7 +248,6 @@
 
         container.addEventListener(isMobile ? 'touchmove' : 'mousemove', (e) => {
             if (!isDragging || !originalImage) return;
-
             if (isMobile) e.preventDefault();
             const coords = getCoords(e);
             const currentX = coords.x;
