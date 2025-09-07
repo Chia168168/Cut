@@ -3,175 +3,274 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>網頁圖片裁切工具 (支援 HEIC/HEIF)</title>
+    <title>網頁圖片裁切工具 (完整版)</title>
     <style>
-        /*... 你的 CSS 程式碼 ...*/
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            border: 2px dashed #ccc;
+            width: 80%;
+            max-width: 800px;
+            min-height: 400px;
+            position: relative;
+            margin-top: 20px;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .container img {
+            max-width: 100%;
+            max-height: 100%;
+            display: none;
+            cursor: crosshair;
+        }
+        .cropper-box {
+            position: absolute;
+            border: 2px solid #007bff;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            cursor: move;
+            display: none;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .controls label {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #cropped-image-container {
+            margin-top: 30px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 80%;
+        }
+        #cropped-image {
+            max-width: 100%;
+            height: auto;
+        }
+        .drag-info {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #aaa;
+            font-size: 18px;
+            pointer-events: none;
+            text-align: center;
+        }
     </style>
-<script src="https://cdn.jsdelivr.net/npm/libheif-js@1.12.0/libheif.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/libheif-js@1.12.0/libheif-wrapper.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/libheif-js@1.12.0/libheif.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/libheif-js@1.12.0/libheif-wrapper.js"></script>
 </head>
 <body>
-<script>
-    const imageUpload = document.getElementById('image-upload');
-    const mainImage = document.getElementById('main-image');
-    const container = document.querySelector('.container');
-    const cropperBox = document.querySelector('.cropper-box');
-    const cropButton = document.getElementById('crop-button');
-    const croppedImageContainer = document.getElementById('cropped-image-container');
-    const croppedImage = document.getElementById('cropped-image');
 
-    let originalImage = null; // 儲存解碼後的圖片物件
-    let isDragging = false;
-    let startX, startY;
-    let cropperRect = {};
-    const isMobile = 'ontouchstart' in window;
+    <h1>網頁圖片裁切工具</h1>
+
+    <div class="controls">
+        <label for="image-upload">選擇圖片檔案 (.jpg, .png, .heic, .heif 等)</label>
+        <input type="file" id="image-upload" accept="image/heic, image/heif, image/jpeg, image/png, image/gif">
+        <button id="crop-button" disabled>裁切圖片</button>
+    </div>
+
+    <div class="container">
+        <img id="main-image" alt="待裁切圖片">
+        <div class="cropper-box"></div>
+        <div class="drag-info" id="drag-info">上傳圖片後，拖曳滑鼠或手指來選取區域</div>
+    </div>
+
+    <div id="cropped-image-container" style="display: none;">
+        <h3>裁切結果</h3>
+        <img id="cropped-image" alt="裁切後的圖片">
+    </div>
     
-    // 初始化 libheif 解碼器
-    let decoder = new LibheifWrapper.HeifDecoder();
+    <script>
+        const imageUpload = document.getElementById('image-upload');
+        const mainImage = document.getElementById('main-image');
+        const container = document.querySelector('.container');
+        const cropperBox = document.querySelector('.cropper-box');
+        const cropButton = document.getElementById('crop-button');
+        const croppedImageContainer = document.getElementById('cropped-image-container');
+        const croppedImage = document.getElementById('cropped-image');
+        const dragInfo = document.getElementById('drag-info');
 
-    // 處理圖片載入邏輯 (包含 HEIC/HEIF)
-    async function handleFile(file) {
-        if (!file) return;
+        let originalImage = null;
+        let isDragging = false;
+        let startX, startY;
+        let cropperRect = {};
+        const isMobile = 'ontouchstart' in window;
+        
+        let decoder = new LibheifWrapper.HeifDecoder();
 
-        // 重置狀態
-        mainImage.src = '';
-        mainImage.style.display = 'none';
-        cropperBox.style.display = 'none';
-        cropButton.disabled = true;
-        croppedImageContainer.style.display = 'none';
-        originalImage = null;
+        function handleFile(file) {
+            if (!file) return;
 
-        if (file.type === 'image/heic' || file.type === 'image/heif') {
-            try {
-                const buffer = await file.arrayBuffer();
-                const primaryImage = decoder.decode(buffer);
+            // 重置狀態
+            mainImage.src = '';
+            mainImage.style.display = 'none';
+            cropperBox.style.display = 'none';
+            cropButton.disabled = true;
+            croppedImageContainer.style.display = 'none';
+            originalImage = null;
+            dragInfo.style.display = 'none';
 
-                // 將解碼後的數據轉換成 Blob 物件
-                const imageBlob = new Blob([primaryImage.data], { type: 'image/jpeg' });
-                const imageUrl = URL.createObjectURL(imageBlob);
+            if (file.type === 'image/heic' || file.type === 'image/heif') {
+                file.arrayBuffer().then(buffer => {
+                    const primaryImage = decoder.decode(buffer);
+                    const imageBlob = new Blob([primaryImage.data], { type: 'image/jpeg' });
+                    const imageUrl = URL.createObjectURL(imageBlob);
 
-                originalImage = new Image();
-                originalImage.src = imageUrl;
-                originalImage.onload = () => {
-                    mainImage.src = originalImage.src;
-                    mainImage.style.display = 'block';
-                    cropButton.disabled = false;
-                    URL.revokeObjectURL(imageUrl); // 釋放記憶體
+                    originalImage = new Image();
+                    originalImage.src = imageUrl;
+                    originalImage.onload = () => {
+                        mainImage.src = originalImage.src;
+                        mainImage.style.display = 'block';
+                        cropButton.disabled = false;
+                        URL.revokeObjectURL(imageUrl); // 釋放記憶體
+                    };
+
+                    originalImage.onerror = () => {
+                        alert('HEIC 圖片載入失敗，可能檔案已損壞或格式不受支援。');
+                        URL.revokeObjectURL(imageUrl);
+                    };
+
+                }).catch(err => {
+                    alert('無法處理 HEIC/HEIF 檔案，請嘗試其他格式。');
+                    console.error('HEIF decoding error:', err);
+                });
+            } else {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    originalImage = new Image();
+                    originalImage.src = event.target.result;
+                    originalImage.onload = () => {
+                        mainImage.src = originalImage.src;
+                        mainImage.style.display = 'block';
+                        cropButton.disabled = false;
+                    };
                 };
-
-            } catch (err) {
-                alert('無法處理 HEIC/HEIF 檔案，請嘗試其他格式。');
-                console.error('HEIF decoding error:', err);
+                reader.readAsDataURL(file);
             }
-        } else {
-            // 其他圖片格式處理
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                originalImage = new Image();
-                originalImage.src = event.target.result;
-                originalImage.onload = () => {
-                    mainImage.src = originalImage.src;
-                    mainImage.style.display = 'block';
-                    cropButton.disabled = false;
-                };
+        }
+        
+        function getCoords(e) {
+            const clientX = isMobile ? e.touches[0].clientX : e.clientX;
+            const clientY = isMobile ? e.touches[0].clientY : e.clientY;
+            const rect = container.getBoundingClientRect();
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
             };
-            reader.readAsDataURL(file);
-        }
-    }
-    
-    // 獲取事件座標，同時支援滑鼠和觸控 (此部分維持不變)
-    function getCoords(e) {
-        const clientX = isMobile ? e.touches[0].clientX : e.clientX;
-        const clientY = isMobile ? e.touches[0].clientY : e.clientY;
-        const rect = container.getBoundingClientRect();
-        return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        };
-    }
-
-    // 監聽圖片上傳
-    imageUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        handleFile(file);
-    });
-
-    // 拖曳事件 (此部分維持不變)
-    container.addEventListener(isMobile ? 'touchstart' : 'mousedown', (e) => {
-        if (!originalImage || mainImage.style.display !== 'block') return;
-        
-        isDragging = true;
-        const coords = getCoords(e);
-        startX = coords.x;
-        startY = coords.y;
-
-        cropperBox.style.display = 'block';
-        cropperBox.style.left = `${startX}px`;
-        cropperBox.style.top = `${startY}px`;
-        cropperBox.style.width = '0px';
-        cropperBox.style.height = '0px';
-    });
-
-    container.addEventListener(isMobile ? 'touchmove' : 'mousemove', (e) => {
-        if (!isDragging || !originalImage) return;
-
-        if (isMobile) e.preventDefault();
-        const coords = getCoords(e);
-        const currentX = coords.x;
-        const currentY = coords.y;
-
-        const width = Math.abs(currentX - startX);
-        const height = Math.abs(currentY - startY);
-        const newLeft = Math.min(currentX, startX);
-        const newTop = Math.min(currentY, startY);
-
-        cropperBox.style.left = `${newLeft}px`;
-        cropperBox.style.top = `${newTop}px`;
-        cropperBox.style.width = `${width}px`;
-        cropperBox.style.height = `${height}px`;
-
-        cropperRect = {
-            x: newLeft,
-            y: newTop,
-            width: width,
-            height: height
-        };
-    });
-
-    container.addEventListener(isMobile ? 'touchend' : 'mouseup', () => {
-        isDragging = false;
-    });
-
-    // 裁切按鈕點擊事件 (此部分維持不變)
-    cropButton.addEventListener('click', () => {
-        if (!originalImage || !cropperRect.width || !cropperRect.height) {
-            alert('請先選擇圖片並框選裁切區域！');
-            return;
         }
 
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        const scaleX = originalImage.naturalWidth / mainImage.offsetWidth;
-        const scaleY = originalImage.naturalHeight / mainImage.offsetHeight;
-        
-        const cropX = cropperRect.x * scaleX;
-        const cropY = cropperRect.y * scaleY;
-        const cropWidth = cropperRect.width * scaleX;
-        const cropHeight = cropperRect.height * scaleY;
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleFile(file);
+        });
 
-        canvas.width = cropWidth;
-        canvas.height = cropHeight;
+        container.addEventListener(isMobile ? 'touchstart' : 'mousedown', (e) => {
+            if (!originalImage || mainImage.style.display !== 'block') return;
+            
+            isDragging = true;
+            const coords = getCoords(e);
+            startX = coords.x;
+            startY = coords.y;
 
-        ctx.drawImage(originalImage, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+            cropperBox.style.display = 'block';
+            cropperBox.style.left = `${startX}px`;
+            cropperBox.style.top = `${startY}px`;
+            cropperBox.style.width = '0px';
+            cropperBox.style.height = '0px';
+        });
 
-        const croppedDataUrl = canvas.toDataURL('image/png');
-        croppedImage.src = croppedDataUrl;
-        croppedImageContainer.style.display = 'block';
-    });
-</script>
+        container.addEventListener(isMobile ? 'touchmove' : 'mousemove', (e) => {
+            if (!isDragging || !originalImage) return;
 
+            if (isMobile) e.preventDefault();
+            const coords = getCoords(e);
+            const currentX = coords.x;
+            const currentY = coords.y;
 
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            const newLeft = Math.min(currentX, startX);
+            const newTop = Math.min(currentY, startY);
+
+            cropperBox.style.left = `${newLeft}px`;
+            cropperBox.style.top = `${newTop}px`;
+            cropperBox.style.width = `${width}px`;
+            cropperBox.style.height = `${height}px`;
+
+            cropperRect = {
+                x: newLeft,
+                y: newTop,
+                width: width,
+                height: height
+            };
+        });
+
+        container.addEventListener(isMobile ? 'touchend' : 'mouseup', () => {
+            isDragging = false;
+        });
+
+        cropButton.addEventListener('click', () => {
+            if (!originalImage || !cropperRect.width || !cropperRect.height) {
+                alert('請先選擇圖片並框選裁切區域！');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const scaleX = originalImage.naturalWidth / mainImage.offsetWidth;
+            const scaleY = originalImage.naturalHeight / mainImage.offsetHeight;
+            
+            const cropX = cropperRect.x * scaleX;
+            const cropY = cropperRect.y * scaleY;
+            const cropWidth = cropperRect.width * scaleX;
+            const cropHeight = cropperRect.height * scaleY;
+
+            canvas.width = cropWidth;
+            canvas.height = cropHeight;
+
+            ctx.drawImage(originalImage, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+            const croppedDataUrl = canvas.toDataURL('image/png');
+            croppedImage.src = croppedDataUrl;
+            croppedImageContainer.style.display = 'block';
+        });
+    </script>
 </body>
 </html>
