@@ -34,9 +34,13 @@
             cursor: pointer;
             width: 80%;
             max-width: 300px;
-            touch-action: manipulation; /* 提高觸控響應 */
+            touch-action: manipulation;
         }
-        #cropButton:hover {
+        #cropButton:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        #cropButton:hover:not(:disabled) {
             background-color: #218838;
         }
         #imageContainer {
@@ -59,8 +63,6 @@
             text-align: center;
             font-size: 1.1em;
         }
-
-        /* 手機響應式設計 */
         @media (max-width: 600px) {
             h1 {
                 font-size: 1.5em;
@@ -94,32 +96,53 @@
         const input = document.getElementById('imageInput');
         const image = document.getElementById('image');
         const resultCanvas = document.getElementById('result');
+        const cropButton = document.getElementById('cropButton');
 
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
-            if (file) {
-                // 釋放之前的 ObjectURL
-                if (currentImageUrl) {
-                    URL.revokeObjectURL(currentImageUrl);
-                }
+            if (!file) {
+                alert('請選擇圖片檔案');
+                return;
+            }
 
-                // 處理 HEIC/HEIF 格式
-                if (file.type === 'image/heic' || file.type === 'image/heif') {
-                    heic2any({ blob: file, toType: 'image/jpeg' })
-                        .then((convertedBlob) => {
-                            currentImageUrl = URL.createObjectURL(convertedBlob);
-                            initializeCropper(currentImageUrl);
-                        })
-                        .catch((error) => {
-                            console.error('HEIC 轉換失敗：', error);
-                            alert('無法處理 HEIC/HEIF 檔案');
-                        });
-                } else {
-                    currentImageUrl = URL.createObjectURL(file);
-                    initializeCropper(currentImageUrl);
-                }
+            // 禁用按鈕，顯示處理中
+            cropButton.disabled = true;
+            cropButton.textContent = '處理中...';
+
+            // 釋放之前的 ObjectURL
+            if (currentImageUrl) {
+                URL.revokeObjectURL(currentImageUrl);
+            }
+
+            // 檢查檔案格式
+            const validTypes = ['image/jpeg', 'image/png', 'image/heic', 'image/heif'];
+            if (!validTypes.includes(file.type)) {
+                alert('僅支援 .jpg, .png, .heic, .heif 格式');
+                resetButton();
+                return;
+            }
+
+            // 處理 HEIC/HEIF 格式
+            if (file.type === 'image/heic' || file.type === 'image/heif') {
+                heic2any({
+                    blob: file,
+                    toType: 'image/jpeg',
+                    quality: 0.8 // 調整品質以減少檔案大小
+                })
+                    .then((convertedBlob) => {
+                        currentImageUrl = URL.createObjectURL(convertedBlob);
+                        initializeCropper(currentImageUrl);
+                        resetButton();
+                    })
+                    .catch((error) => {
+                        console.error('HEIC/HEIF 轉換失敗：', error);
+                        alert('無法處理 HEIC/HEIF 檔案，請試試其他格式');
+                        resetButton();
+                    });
             } else {
-                alert('請選擇有效的圖片檔案');
+                currentImageUrl = URL.createObjectURL(file);
+                initializeCropper(currentImageUrl);
+                resetButton();
             }
         });
 
@@ -135,7 +158,7 @@
                 movable: true,
                 zoomable: true,
                 scalable: true,
-                touchDragZoom: true, // 啟用觸控縮放
+                touchDragZoom: true,
                 cropBoxMovable: true,
                 cropBoxResizable: true,
                 ready: () => {
@@ -152,6 +175,9 @@
                 alert('請先上傳圖片');
                 return;
             }
+            cropButton.disabled = true;
+            cropButton.textContent = '裁切中...';
+
             const croppedCanvas = cropper.getCroppedCanvas({
                 width: 300,
                 height: 300,
@@ -165,6 +191,12 @@
             } else {
                 alert('裁切失敗，請重新選取區域');
             }
+            resetButton();
+        }
+
+        function resetButton() {
+            cropButton.disabled = false;
+            cropButton.textContent = '裁切圖片';
         }
     </script>
 </body>
