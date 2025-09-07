@@ -10,36 +10,76 @@
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
     <button onclick="cropImage()">裁切圖片</button>
     <div>
+        <p>上傳圖片後，拖曳滑鼠或手指來選取區域</p>
         <img id="image" style="max-width: 100%;">
     </div>
     <h2>裁切結果</h2>
-    <canvas id="result"></canvas>
+    <canvas id="result" style="max-width: 100%;"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
-        let cropper;
+        let cropper = null;
+        let currentImageUrl = null; // 儲存當前圖片的 ObjectURL
         const input = document.getElementById('imageInput');
         const image = document.getElementById('image');
+        const resultCanvas = document.getElementById('result');
 
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
-                const url = URL.createObjectURL(file);
-                image.src = url;
-                if (cropper) cropper.destroy();
+                // 釋放之前的 ObjectURL
+                if (currentImageUrl) {
+                    URL.revokeObjectURL(currentImageUrl);
+                }
+                // 創建新圖片的 ObjectURL
+                currentImageUrl = URL.createObjectURL(file);
+                image.src = currentImageUrl;
+
+                // 銷毀舊的 Cropper 實例
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+
+                // 初始化新的 Cropper 實例
                 cropper = new Cropper(image, {
-                    aspectRatio: 1,
+                    aspectRatio: 1, // 可根據需求調整比例
                     viewMode: 1,
+                    ready: () => {
+                        // 確保裁切框就緒
+                        console.log('Cropper 已初始化');
+                    }
                 });
+
+                // 清空裁切結果
+                const context = resultCanvas.getContext('2d');
+                context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            } else {
+                alert('請選擇有效的圖片檔案');
             }
         });
 
         function cropImage() {
-            if (cropper) {
-                const canvas = cropper.getCroppedCanvas();
-                document.getElementById('result').replaceWith(canvas);
-            } else {
+            if (!cropper) {
                 alert('請先上傳圖片');
+                return;
+            }
+
+            // 獲取裁切後的畫布
+            const croppedCanvas = cropper.getCroppedCanvas({
+                width: 300, // 可調整輸出尺寸
+                height: 300,
+            });
+
+            if (croppedCanvas) {
+                // 將裁切結果顯示在現有 canvas 上
+                resultCanvas.width = croppedCanvas.width;
+                resultCanvas.height = croppedCanvas.height;
+                const context = resultCanvas.getContext('2d');
+                context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+                context.drawImage(croppedCanvas, 0, 0);
+            } else {
+                alert('裁切失敗，請重新選取區域');
             }
         }
     </script>
