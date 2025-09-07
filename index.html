@@ -2,104 +2,31 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>網頁圖片裁切工具</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        h1 {
-            font-size: 1.8em;
-            text-align: center;
-        }
-        #imageInput {
-            display: block;
-            margin: 20px auto;
-            font-size: 1.2em;
-        }
-        #cropButton {
-            display: block;
-            margin: 20px auto;
-            padding: 15px 30px;
-            font-size: 1.5em;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 80%;
-            max-width: 300px;
-        }
-        #cropButton:disabled {
-            background-color: #6c757d;
-            cursor: not-allowed;
-        }
-        #cropButton:hover:not(:disabled) {
-            background-color: #218838;
-        }
-        #imageContainer {
-            max-width: 100%;
-            margin: 20px 0;
-            text-align: center;
-        }
-        #image {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0 auto;
-        }
-        #resultContainer {
-            max-width: 100%;
-            margin: 20px 0;
-            text-align: center;
-        }
-        #result {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0 auto;
-        }
-        p {
-            text-align: center;
-            font-size: 1.1em;
-        }
-    </style>
 </head>
 <body>
     <h1>網頁圖片裁切工具</h1>
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
-    <button id="cropButton" onclick="cropImage()">裁切圖片</button>
-    <div id="imageContainer">
+    <button onclick="cropImage()">裁切圖片</button>
+    <div>
         <p>上傳圖片後，拖曳滑鼠或手指來選取區域</p>
         <img id="image" style="max-width: 100%;">
     </div>
     <h2>裁切結果</h2>
-    <div id="resultContainer">
-        <canvas id="result" style="max-width: 100%;"></canvas>
-    </div>
+    <canvas id="result" style="max-width: 100%;"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
         let cropper = null;
-        let currentImageUrl = null;
+        let currentImageUrl = null; // 儲存當前圖片的 ObjectURL
         const input = document.getElementById('imageInput');
         const image = document.getElementById('image');
         const resultCanvas = document.getElementById('result');
-        const cropButton = document.getElementById('cropButton');
-        const resultContainer = document.getElementById('resultContainer');
 
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
-                // 禁用按鈕，顯示處理中
-                cropButton.disabled = true;
-                cropButton.textContent = '處理中...';
-
                 // 釋放之前的 ObjectURL
                 if (currentImageUrl) {
                     URL.revokeObjectURL(currentImageUrl);
@@ -116,13 +43,11 @@
 
                 // 初始化新的 Cropper 實例
                 cropper = new Cropper(image, {
-                    aspectRatio: 1,
+                    aspectRatio: 1, // 可根據需求調整比例
                     viewMode: 1,
-                    zoomable: false, // 禁用縮放功能，防止意外放大
                     ready: () => {
+                        // 確保裁切框就緒
                         console.log('Cropper 已初始化');
-                        cropButton.disabled = false;
-                        cropButton.textContent = '裁切圖片';
                     }
                 });
 
@@ -131,8 +56,6 @@
                 context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
             } else {
                 alert('請選擇有效的圖片檔案');
-                cropButton.disabled = false;
-                cropButton.textContent = '裁切圖片';
             }
         });
 
@@ -142,30 +65,22 @@
                 return;
             }
 
-            // 禁用按鈕，顯示裁切中
-            cropButton.disabled = true;
-            cropButton.textContent = '裁切中...';
-
+            // 獲取裁切後的畫布
             const croppedCanvas = cropper.getCroppedCanvas({
-                width: 300,
+                width: 300, // 可調整輸出尺寸
                 height: 300,
             });
 
             if (croppedCanvas) {
+                // 將裁切結果顯示在現有 canvas 上
                 resultCanvas.width = croppedCanvas.width;
                 resultCanvas.height = croppedCanvas.height;
                 const context = resultCanvas.getContext('2d');
                 context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
                 context.drawImage(croppedCanvas, 0, 0);
-
-                // 自動滾動到裁切結果
-                resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
                 alert('裁切失敗，請重新選取區域');
             }
-
-            cropButton.disabled = false;
-            cropButton.textContent = '裁切圖片';
         }
     </script>
 </body>
