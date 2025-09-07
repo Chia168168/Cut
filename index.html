@@ -42,16 +42,27 @@
         #cropButton:hover:not(:disabled) {
             background-color: #218838;
         }
+        #imageContainer {
+            max-width: 100%;
+            margin: 20px 0;
+            text-align: center;
+        }
         #image {
             max-width: 100%;
             height: auto;
             display: block;
+            margin: 0 auto;
+        }
+        #resultContainer {
+            max-width: 100%;
+            margin: 20px 0;
+            text-align: center;
         }
         #result {
             max-width: 100%;
             height: auto;
             display: block;
-            margin: 20px auto;
+            margin: 0 auto;
         }
         p {
             text-align: center;
@@ -63,12 +74,14 @@
     <h1>網頁圖片裁切工具</h1>
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
     <button id="cropButton" onclick="cropImage()">裁切圖片</button>
-    <div>
+    <div id="imageContainer">
         <p>上傳圖片後，拖曳滑鼠或手指來選取區域</p>
         <img id="image" style="max-width: 100%;">
     </div>
     <h2>裁切結果</h2>
-    <canvas id="result" style="max-width: 100%;"></canvas>
+    <div id="resultContainer">
+        <canvas id="result" style="max-width: 100%;"></canvas>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
@@ -78,6 +91,7 @@
         const image = document.getElementById('image');
         const resultCanvas = document.getElementById('result');
         const cropButton = document.getElementById('cropButton');
+        const resultContainer = document.getElementById('resultContainer');
 
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -104,9 +118,9 @@
                 cropper = new Cropper(image, {
                     aspectRatio: 1,
                     viewMode: 1,
+                    zoomable: false, // 禁用縮放功能，防止意外放大
                     ready: () => {
                         console.log('Cropper 已初始化');
-                        // 恢復按鈕
                         cropButton.disabled = false;
                         cropButton.textContent = '裁切圖片';
                     }
@@ -143,11 +157,13 @@
                 const context = resultCanvas.getContext('2d');
                 context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
                 context.drawImage(croppedCanvas, 0, 0);
+
+                // 自動滾動到裁切結果
+                resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
                 alert('裁切失敗，請重新選取區域');
             }
 
-            // 恢復按鈕
             cropButton.disabled = false;
             cropButton.textContent = '裁切圖片';
         }
