@@ -2,24 +2,95 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>網頁圖片裁切工具</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-size: 1.8em;
+            text-align: center;
+        }
+        #imageInput {
+            display: block;
+            margin: 20px auto;
+            font-size: 1.2em;
+        }
+        #cropButton {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 80%;
+            max-width: 300px;
+            touch-action: manipulation; /* 提高觸控響應 */
+        }
+        #cropButton:hover {
+            background-color: #218838;
+        }
+        #imageContainer {
+            max-width: 100%;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        #image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        #result {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+        }
+        p {
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        /* 手機響應式設計 */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            #cropButton {
+                padding: 12px 20px;
+                font-size: 1.2em;
+            }
+            #imageInput {
+                font-size: 1em;
+            }
+        }
+    </style>
 </head>
 <body>
     <h1>網頁圖片裁切工具</h1>
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
-    <button onclick="cropImage()">裁切圖片</button>
-    <div>
+    <button id="cropButton" onclick="cropImage()">裁切圖片</button>
+    <div id="imageContainer">
         <p>上傳圖片後，拖曳滑鼠或手指來選取區域</p>
-        <img id="image" style="max-width: 100%;">
+        <img id="image" src="">
     </div>
     <h2>裁切結果</h2>
-    <canvas id="result" style="max-width: 100%;"></canvas>
+    <canvas id="result"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.3/dist/heic2any.min.js"></script>
     <script>
         let cropper = null;
-        let currentImageUrl = null; // 儲存當前圖片的 ObjectURL
+        let currentImageUrl = null;
         const input = document.getElementById('imageInput');
         const image = document.getElementById('image');
         const resultCanvas = document.getElementById('result');
@@ -31,48 +102,61 @@
                 if (currentImageUrl) {
                     URL.revokeObjectURL(currentImageUrl);
                 }
-                // 創建新圖片的 ObjectURL
-                currentImageUrl = URL.createObjectURL(file);
-                image.src = currentImageUrl;
 
-                // 銷毀舊的 Cropper 實例
-                if (cropper) {
-                    cropper.destroy();
-                    cropper = null;
+                // 處理 HEIC/HEIF 格式
+                if (file.type === 'image/heic' || file.type === 'image/heif') {
+                    heic2any({ blob: file, toType: 'image/jpeg' })
+                        .then((convertedBlob) => {
+                            currentImageUrl = URL.createObjectURL(convertedBlob);
+                            initializeCropper(currentImageUrl);
+                        })
+                        .catch((error) => {
+                            console.error('HEIC 轉換失敗：', error);
+                            alert('無法處理 HEIC/HEIF 檔案');
+                        });
+                } else {
+                    currentImageUrl = URL.createObjectURL(file);
+                    initializeCropper(currentImageUrl);
                 }
-
-                // 初始化新的 Cropper 實例
-                cropper = new Cropper(image, {
-                    aspectRatio: 1, // 可根據需求調整比例
-                    viewMode: 1,
-                    ready: () => {
-                        // 確保裁切框就緒
-                        console.log('Cropper 已初始化');
-                    }
-                });
-
-                // 清空裁切結果
-                const context = resultCanvas.getContext('2d');
-                context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
             } else {
                 alert('請選擇有效的圖片檔案');
             }
         });
+
+        function initializeCropper(url) {
+            image.src = url;
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            cropper = new Cropper(image, {
+                aspectRatio: 1,
+                viewMode: 1,
+                movable: true,
+                zoomable: true,
+                scalable: true,
+                touchDragZoom: true, // 啟用觸控縮放
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                ready: () => {
+                    console.log('Cropper 初始化完成');
+                }
+            });
+            // 清空裁切結果
+            const context = resultCanvas.getContext('2d');
+            context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+        }
 
         function cropImage() {
             if (!cropper) {
                 alert('請先上傳圖片');
                 return;
             }
-
-            // 獲取裁切後的畫布
             const croppedCanvas = cropper.getCroppedCanvas({
-                width: 300, // 可調整輸出尺寸
+                width: 300,
                 height: 300,
             });
-
             if (croppedCanvas) {
-                // 將裁切結果顯示在現有 canvas 上
                 resultCanvas.width = croppedCanvas.width;
                 resultCanvas.height = croppedCanvas.height;
                 const context = resultCanvas.getContext('2d');
