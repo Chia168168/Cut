@@ -3,157 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>網頁圖片裁切工具 - 已解決縮放問題</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <title>圖片裁切工具 - 完全解決縮放問題</title>
     <style>
         * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
             box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            touch-action: manipulation; /* 阻止双击缩放 */
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 100%;
-            margin: 0 auto;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
             padding: 20px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4efe9 100%);
+            color: #2c3e50;
             line-height: 1.6;
+            touch-action: manipulation;
+            max-width: 100%;
+            overflow-x: hidden;
         }
         
         .container {
             max-width: 800px;
             margin: 0 auto;
             background: white;
-            border-radius: 15px;
+            border-radius: 16px;
             padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eaeaea;
         }
         
         h1 {
-            font-size: 2.2em;
-            text-align: center;
-            margin-bottom: 20px;
+            font-size: 2.2rem;
             color: #2c3e50;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #eee;
+            margin-bottom: 10px;
         }
         
-        h2 {
-            font-size: 1.6em;
-            margin: 25px 0 15px;
-            color: #3498db;
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
         }
         
-        .instructions {
-            background: #e8f4fc;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid #3498db;
-        }
-        
-        .instructions ol {
-            padding-left: 20px;
-            margin: 10px 0;
-        }
-        
-        .instructions li {
-            margin-bottom: 8px;
-        }
-        
-        #imageInput {
-            display: block;
-            width: 100%;
-            margin: 20px 0;
-            padding: 12px;
+        .upload-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 25px 0;
+            padding: 25px;
             border: 2px dashed #3498db;
-            border-radius: 8px;
+            border-radius: 12px;
             background: #f8fafc;
-            font-size: 1.1em;
-            cursor: pointer;
+            transition: all 0.3s;
         }
         
-        #cropButton {
-            display: block;
-            margin: 20px auto;
+        .upload-area:hover {
+            background: #e8f4fc;
+            border-color: #2980b9;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-label {
+            display: inline-block;
             padding: 15px 30px;
-            font-size: 1.3em;
             background: linear-gradient(to right, #3498db, #2c3e50);
             color: white;
-            border: none;
             border-radius: 8px;
             cursor: pointer;
-            width: 80%;
-            max-width: 300px;
+            font-size: 1.1rem;
             transition: transform 0.2s, box-shadow 0.2s;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
-        #cropButton:disabled {
-            background: #95a5a6;
+        .file-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .preview-container {
+            position: relative;
+            width: 100%;
+            margin: 25px 0;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            background: #f8fafc;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #image {
+            display: block;
+            max-width: 100%;
+            max-height: 60vh;
+            touch-action: none;
+            -webkit-user-drag: none;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn:disabled {
+            background: #bdc3c7;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
         
-        #cropButton:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
-        }
-        
-        #imageContainer {
-            max-width: 100%;
-            margin: 20px 0;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
             background: #f8fafc;
-            padding: 10px;
-        }
-        
-        #image {
-            max-width: 100%;
-            max-height: 50vh;
-            display: block;
-            margin: 0 auto;
-            /* 关键样式：防止任何缩放行为 */
-            touch-action: none;
-            -webkit-user-drag: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-        }
-        
-        #resultContainer {
-            max-width: 100%;
-            margin: 20px 0;
+            border-radius: 12px;
             text-align: center;
-            padding: 15px;
-            background: #f8fafc;
-            border-radius: 8px;
+        }
+        
+        .result-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 15px;
         }
         
         #result {
             max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0 auto;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 4px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .instructions {
+            background: #e8f4fc;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #3498db;
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        
+        .note {
+            background: #fff4e6;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #ffa94d;
         }
         
         .loader {
             display: none;
+            width: 40px;
+            height: 40px;
             border: 5px solid #f3f3f3;
             border-top: 5px solid #3498db;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
@@ -166,18 +214,11 @@
         .success-message {
             display: none;
             text-align: center;
-            padding: 10px;
+            padding: 12px;
             background: #d4edda;
             color: #155724;
-            border-radius: 5px;
+            border-radius: 8px;
             margin: 15px 0;
-        }
-        
-        .note {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            text-align: center;
-            margin-top: 15px;
         }
         
         @media (max-width: 600px) {
@@ -186,196 +227,268 @@
             }
             
             h1 {
-                font-size: 1.8em;
+                font-size: 1.8rem;
             }
             
-            #cropButton {
-                width: 90%;
-                padding: 12px 20px;
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>網頁圖片裁切工具 v2.0</h1>
+        <header>
+            <h1>圖片裁切工具</h1>
+            <p class="subtitle">完全解決滑動縮放問題版本</p>
+        </header>
         
         <div class="instructions">
-            <h2>使用說明</h2>
+            <h3>使用說明</h3>
             <ol>
-                <li>選擇一張圖片（JPG、PNG或HEIC格式）</li>
-                <li>使用手指或滑鼠拖動來選擇裁切區域</li>
+                <li>點擊"選擇圖片"按鈕上傳圖片</li>
+                <li>使用拖動來調整裁切區域</li>
                 <li>點擊"裁切圖片"按鈕完成裁切</li>
-                <li>結果將顯示在頁面下方</li>
+                <li>裁切結果將顯示在下方</li>
             </ol>
-            <p class="note">注意：此版本已完全解決滑動時圖片放大的問題</p>
         </div>
         
-        <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
-        <button id="cropButton" onclick="cropImage()">裁切圖片</button>
+        <div class="note">
+            <strong>注意：</strong> 此版本已完全禁用所有縮放功能，包括雙指縮放、雙擊縮放和滾輪縮放。
+        </div>
+        
+        <div class="upload-area">
+            <input type="file" id="imageInput" class="file-input" accept="image/*">
+            <label for="imageInput" class="file-label">選擇圖片</label>
+            <p>支持 JPG、PNG 和 HEIC 格式</p>
+        </div>
+        
+        <div class="preview-container">
+            <img id="image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f8f9fa'/%3E%3Cpath d='M200 150L250 100L300 150L250 200Z' fill='%23e9ecef' stroke='%23dee2e6' stroke-width='2'/%3E%3Ctext x='200' y='160' font-family='Arial' font-size='18' fill='%236c757d' text-anchor='middle'%3E預覽區域%3C/text%3E%3C/svg%3E">
+        </div>
+        
+        <div class="controls">
+            <button id="cropButton" class="btn btn-primary" disabled>裁切圖片</button>
+            <button id="resetButton" class="btn" disabled>重置</button>
+        </div>
         
         <div class="loader" id="loader"></div>
         <div class="success-message" id="successMessage">圖片裁切成功！</div>
         
-        <div id="imageContainer">
-            <img id="image">
-        </div>
-        
-        <h2>裁切結果</h2>
-        <div id="resultContainer">
+        <div class="result-container">
+            <h3 class="result-title">裁切結果</h3>
             <canvas id="result"></canvas>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
+        // 全局變量
         let cropper = null;
         let currentImageUrl = null;
-        const input = document.getElementById('imageInput');
+        
+        // 獲取DOM元素
+        const imageInput = document.getElementById('imageInput');
         const image = document.getElementById('image');
-        const resultCanvas = document.getElementById('result');
         const cropButton = document.getElementById('cropButton');
+        const resetButton = document.getElementById('resetButton');
+        const resultCanvas = document.getElementById('result');
         const loader = document.getElementById('loader');
         const successMessage = document.getElementById('successMessage');
-
-        // 禁用所有可能引起缩放的手势和事件
-        document.addEventListener('gesturestart', function(e) {
-            e.preventDefault();
-        });
         
-        document.addEventListener('gesturechange', function(e) {
-            e.preventDefault();
-        });
-        
-        document.addEventListener('gestureend', function(e) {
-            e.preventDefault();
-        });
-        
-        // 禁用双指缩放
-        document.addEventListener('touchstart', function(event) {
-            if (event.touches.length > 1) {
-                event.preventDefault();
-            }
-        }, { passive: false });
-        
-        document.addEventListener('touchmove', function(event) {
-            if (event.touches.length > 1) {
-                event.preventDefault();
-            }
-        }, { passive: false });
-        
-        // 禁用双击缩放
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
-            const now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) {
-                event.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, { passive: false });
-
-        input.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                // 禁用按鈕，顯示處理中
-                cropButton.disabled = true;
-                loader.style.display = 'block';
-                successMessage.style.display = 'none';
-
-                // 釋放之前的 ObjectURL
-                if (currentImageUrl) {
-                    URL.revokeObjectURL(currentImageUrl);
+        // 徹底禁用所有縮放和手勢功能
+        function disableZoom() {
+            // 禁用雙擊縮放
+            document.addEventListener('dblclick', function(e) {
+                e.preventDefault();
+            }, { passive: false });
+            
+            // 禁用雙指縮放
+            document.addEventListener('touchstart', function(e) {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
                 }
-                
-                // 創建新圖片的 ObjectURL
-                currentImageUrl = URL.createObjectURL(file);
+            }, { passive: false });
+            
+            document.addEventListener('touchmove', function(e) {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // 禁用手势
+            document.addEventListener('gesturestart', function(e) {
+                e.preventDefault();
+            });
+            
+            document.addEventListener('gesturechange', function(e) {
+                e.preventDefault();
+            });
+            
+            document.addEventListener('gestureend', function(e) {
+                e.preventDefault();
+            });
+            
+            // 禁用滾輪縮放
+            document.addEventListener('wheel', function(e) {
+                if (e.ctrlKey) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // 特別針對圖片的額外防護
+            image.style.touchAction = 'none';
+            image.style.webkitUserDrag = 'none';
+            image.style.userSelect = 'none';
+        }
+        
+        // 初始化時禁用縮放
+        disableZoom();
+        
+        // 圖片上傳處理
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // 顯示載入中
+            cropButton.disabled = true;
+            resetButton.disabled = true;
+            loader.style.display = 'block';
+            successMessage.style.display = 'none';
+            
+            // 釋放之前的URL
+            if (currentImageUrl) {
+                URL.revokeObjectURL(currentImageUrl);
+            }
+            
+            // 創建新圖片的URL
+            currentImageUrl = URL.createObjectURL(file);
+            
+            // 加載圖片
+            const img = new Image();
+            img.onload = function() {
                 image.src = currentImageUrl;
-
-                // 銷毀舊的 Cropper 實例
-                if (cropper) {
-                    cropper.destroy();
-                    cropper = null;
-                }
-
-                // 圖片載入後初始化 Cropper
-                image.onload = function() {
-                    // 初始化新的 Cropper 實例
-                    cropper = new Cropper(image, {
-                        aspectRatio: 1,
-                        viewMode: 1,
-                        zoomable: false,
-                        zoomOnTouch: false,
-                        zoomOnWheel: false,
-                        movable: true,
-                        rotatable: false,
-                        scalable: false,
-                        toggleDragModeOnDblclick: false,
-                        ready: () => {
-                            console.log('Cropper 已初始化');
-                            cropButton.disabled = false;
-                            loader.style.display = 'none';
-                        }
-                    });
-                };
                 
-                // 清空裁切結果
-                const context = resultCanvas.getContext('2d');
-                context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-            } else {
-                alert('請選擇有效的圖片檔案');
-                cropButton.disabled = false;
+                // 初始化Cropper
+                initCropper();
+            };
+            img.onerror = function() {
+                alert('圖片載入失敗，請嘗試其他圖片');
                 loader.style.display = 'none';
+            };
+            img.src = currentImageUrl;
+        });
+        
+        // 初始化Cropper
+        function initCropper() {
+            // 銷毀現有的Cropper實例
+            if (cropper) {
+                cropper.destroy();
+            }
+            
+            // 設置Cropper選項 - 完全禁用所有縮放功能
+            const cropperOptions = {
+                viewMode: 1,
+                dragMode: 'move',
+                aspectRatio: 1,
+                autoCropArea: 0.8,
+                restore: false,
+                guides: true,
+                center: true,
+                highlight: false,
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                toggleDragModeOnDblclick: false,
+                // 禁用所有縮放相關功能
+                zoomable: false,
+                zoomOnTouch: false,
+                zoomOnWheel: false,
+                scalable: false,
+                rotatable: false
+            };
+            
+            // 初始化Cropper
+            cropper = new Cropper(image, cropperOptions);
+            
+            // 啟用按鈕
+            cropButton.disabled = false;
+            resetButton.disabled = false;
+            loader.style.display = 'none';
+        }
+        
+        // 裁切圖片
+        cropButton.addEventListener('click', function() {
+            if (!cropper) {
+                alert('請先上傳圖片');
+                return;
+            }
+            
+            // 顯示載入中
+            cropButton.disabled = true;
+            resetButton.disabled = true;
+            loader.style.display = 'block';
+            
+            // 獲取裁切後的Canvas
+            const croppedCanvas = cropper.getCroppedCanvas({
+                width: 300,
+                height: 300,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high'
+            });
+            
+            // 顯示結果
+            if (croppedCanvas) {
+                resultCanvas.width = croppedCanvas.width;
+                resultCanvas.height = croppedCanvas.height;
+                const ctx = resultCanvas.getContext('2d');
+                ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+                ctx.drawImage(croppedCanvas, 0, 0);
+                
+                // 顯示成功消息
+                successMessage.style.display = 'block';
+                
+                // 滾動到結果區域
+                setTimeout(function() {
+                    resultCanvas.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            } else {
+                alert('裁切失敗，請重新嘗試');
+            }
+            
+            // 恢復按鈕狀態
+            cropButton.disabled = false;
+            resetButton.disabled = false;
+            loader.style.display = 'none';
+        });
+        
+        // 重置功能
+        resetButton.addEventListener('click', function() {
+            if (cropper) {
+                cropper.reset();
+                successMessage.style.display = 'none';
+                
+                // 清空結果Canvas
+                const ctx = resultCanvas.getContext('2d');
+                ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
             }
         });
-
-        // 阻止圖片區域的所有縮放事件
-        image.addEventListener('wheel', (e) => {
+        
+        // 防止圖片區域的滾動和縮放
+        image.addEventListener('wheel', function(e) {
             e.preventDefault();
             e.stopPropagation();
             return false;
         }, { passive: false });
         
-        function cropImage() {
-            if (!cropper) {
-                alert('請先上傳圖片');
-                return;
-            }
-
-            cropButton.disabled = true;
-            loader.style.display = 'block';
-
-            // 使用setTimeout確保UI有時間更新
-            setTimeout(() => {
-                const croppedCanvas = cropper.getCroppedCanvas({
-                    width: 300,
-                    height: 300,
-                });
-
-                if (croppedCanvas) {
-                    resultCanvas.width = croppedCanvas.width;
-                    resultCanvas.height = croppedCanvas.height;
-                    const context = resultCanvas.getContext('2d');
-                    context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-                    context.drawImage(croppedCanvas, 0, 0);
-
-                    // 顯示成功消息
-                    successMessage.style.display = 'block';
-                    
-                    // 自動滾動到裁切結果
-                    setTimeout(() => {
-                        resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 300);
-                } else {
-                    alert('裁切失敗，請重新選取區域');
-                }
-
-                cropButton.disabled = false;
-                loader.style.display = 'none';
-            }, 100);
-        }
-        
         // 初始狀態
         cropButton.disabled = true;
+        resetButton.disabled = true;
     </script>
+
+    <!-- 加載Cropper.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
 </body>
 </html>
