@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>網頁圖片裁切工具 v1.0</title>
+    <title>TENG 圖片裁切工具 v1.0</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <style>
         body {
@@ -16,7 +16,22 @@
         h1 {
             color: #333;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+        }
+        .back-button {
+            display: block;
+            margin: 0 auto 20px auto;
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            text-align: center;
+            width: 200px;
+            transition: background-color 0.3s;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
         }
         h2 {
             color: #444;
@@ -152,7 +167,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>網頁圖片裁切工具 v1.0</h1>
+        <h1>TENG 圖片裁切工具 v1.0</h1>
+        <a href="https://chia168168.github.io/TENG-image-tools-v2/" class="back-button">返回圖片處理工具首頁</a>
+        
         <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif,image/webp">
         
         <div class="settings-panel">
