@@ -3,17 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>圖片裁切工具 - 完全修復版</title>
+    <title>圖片裁切工具 - 終極修復版</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
         }
         
         body {
@@ -110,7 +106,6 @@
             display: block;
             max-width: 100%;
             max-height: 60vh;
-            touch-action: none;
         }
         
         .controls {
@@ -250,7 +245,7 @@
     <div class="container">
         <header>
             <h1>圖片裁切工具</h1>
-            <p class="subtitle">完全修復版 - 選擇圖片後立即顯示</p>
+            <p class="subtitle">終極修復版 - 選擇圖片後立即顯示</p>
         </header>
         
         <div class="instructions">
@@ -313,9 +308,6 @@
             resetButton.addEventListener('click', resetCropper);
             uploadArea.addEventListener('click', () => imageInput.click());
             
-            // 禁用縮放和手勢
-            disableZoom();
-            
             // 初始狀態
             updateStatus('請選擇要裁切的圖片', 'info');
         }
@@ -345,6 +337,9 @@
             currentImageUrl = URL.createObjectURL(file);
             
             // 設置圖片源
+            image.src = currentImageUrl;
+            
+            // 圖片載入成功後初始化Cropper
             image.onload = function() {
                 initCropper();
                 updateStatus('圖片載入成功！請調整裁切區域', 'success');
@@ -353,12 +348,11 @@
                 resetButton.disabled = false;
             };
             
+            // 圖片載入失敗處理
             image.onerror = function() {
                 updateStatus('圖片載入失敗，請嘗試其他圖片', 'error');
                 loader.style.display = 'none';
             };
-            
-            image.src = currentImageUrl;
         }
         
         // 初始化Cropper
@@ -461,52 +455,6 @@
         function updateStatus(message, type) {
             statusMessage.textContent = message;
             statusMessage.className = 'status ' + type;
-        }
-        
-        // 禁用縮放和手勢
-        function disableZoom() {
-            // 禁用雙擊縮放
-            document.addEventListener('dblclick', function(e) {
-                e.preventDefault();
-            }, { passive: false });
-            
-            // 禁用雙指縮放
-            document.addEventListener('touchstart', function(e) {
-                if (e.touches.length > 1) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-            
-            document.addEventListener('touchmove', function(e) {
-                if (e.touches.length > 1) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-            
-            // 禁用手势
-            document.addEventListener('gesturestart', function(e) {
-                e.preventDefault();
-            });
-            
-            document.addEventListener('gesturechange', function(e) {
-                e.preventDefault();
-            });
-            
-            document.addEventListener('gestureend', function(e) {
-                e.preventDefault();
-            });
-            
-            // 禁用滾輪縮放
-            document.addEventListener('wheel', function(e) {
-                if (e.ctrlKey) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-            
-            // 特別針對圖片的額外防護
-            image.style.touchAction = 'none';
-            image.style.webkitUserDrag = 'none';
-            image.style.userSelect = 'none';
         }
         
         // 頁面載入時初始化
