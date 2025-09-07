@@ -3,112 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>網頁圖片裁切工具 v1.3</title>
+    <title>網頁圖片裁切工具 - 已解決縮放問題</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation; /* 阻止双击缩放 */
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 100%;
             margin: 0 auto;
             padding: 20px;
-            box-sizing: border-box;
-            /* 防止整個頁面縮放 */
-            touch-action: manipulation;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            line-height: 1.6;
         }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
         h1 {
-            font-size: 1.8em;
+            font-size: 2.2em;
             text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
         }
+        
+        h2 {
+            font-size: 1.6em;
+            margin: 25px 0 15px;
+            color: #3498db;
+        }
+        
+        .instructions {
+            background: #e8f4fc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
         #imageInput {
             display: block;
-            margin: 20px auto;
-            font-size: 1.2em;
+            width: 100%;
+            margin: 20px 0;
+            padding: 12px;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            background: #f8fafc;
+            font-size: 1.1em;
+            cursor: pointer;
         }
+        
         #cropButton {
             display: block;
             margin: 20px auto;
             padding: 15px 30px;
-            font-size: 1.5em;
-            background-color: #28a745;
+            font-size: 1.3em;
+            background: linear-gradient(to right, #3498db, #2c3e50);
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             width: 80%;
             max-width: 300px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+        
         #cropButton:disabled {
-            background-color: #6c757d;
+            background: #95a5a6;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
+        
         #cropButton:hover:not(:disabled) {
-            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
         }
+        
         #imageContainer {
             max-width: 100%;
             margin: 20px 0;
             text-align: center;
-            /* 防止容器縮放 */
+            position: relative;
             overflow: hidden;
-            touch-action: none;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background: #f8fafc;
+            padding: 10px;
         }
+        
         #image {
             max-width: 100%;
             max-height: 50vh;
-            height: auto;
             display: block;
             margin: 0 auto;
-            /* 防止圖片縮放 */
+            /* 关键样式：防止任何缩放行为 */
             touch-action: none;
             -webkit-user-drag: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
         }
+        
         #resultContainer {
             max-width: 100%;
             margin: 20px 0;
             text-align: center;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
         }
+        
         #result {
             max-width: 100%;
             height: auto;
             display: block;
             margin: 0 auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
         }
-        p {
-            text-align: center;
-            font-size: 1.1em;
-        }
-        /* 添加載入指示器 */
+        
         .loader {
             display: none;
             border: 5px solid #f3f3f3;
             border-top: 5px solid #3498db;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            background: #d4edda;
+            color: #155724;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        
+        .note {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            #cropButton {
+                width: 90%;
+                padding: 12px 20px;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>網頁圖片裁切工具 v1.3</h1>
-    <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
-    <button id="cropButton" onclick="cropImage()">裁切圖片</button>
-    <div class="loader" id="loader"></div>
-    <div id="imageContainer">
-        <p>上傳圖片後，拖曳滑鼠或手指來選取區域</p>
-        <img id="image" style="max-width: 100%;">
-    </div>
-    <h2>裁切結果</h2>
-    <div id="resultContainer">
-        <canvas id="result" style="max-width: 100%;"></canvas>
+    <div class="container">
+        <h1>網頁圖片裁切工具 v2.0</h1>
+        
+        <div class="instructions">
+            <h2>使用說明</h2>
+            <ol>
+                <li>選擇一張圖片（JPG、PNG或HEIC格式）</li>
+                <li>使用手指或滑鼠拖動來選擇裁切區域</li>
+                <li>點擊"裁切圖片"按鈕完成裁切</li>
+                <li>結果將顯示在頁面下方</li>
+            </ol>
+            <p class="note">注意：此版本已完全解決滑動時圖片放大的問題</p>
+        </div>
+        
+        <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
+        <button id="cropButton" onclick="cropImage()">裁切圖片</button>
+        
+        <div class="loader" id="loader"></div>
+        <div class="success-message" id="successMessage">圖片裁切成功！</div>
+        
+        <div id="imageContainer">
+            <img id="image">
+        </div>
+        
+        <h2>裁切結果</h2>
+        <div id="resultContainer">
+            <canvas id="result"></canvas>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
@@ -119,19 +235,44 @@
         const image = document.getElementById('image');
         const resultCanvas = document.getElementById('result');
         const cropButton = document.getElementById('cropButton');
-        const resultContainer = document.getElementById('resultContainer');
         const loader = document.getElementById('loader');
+        const successMessage = document.getElementById('successMessage');
 
-        // 禁用雙指縮放和手勢
-        document.addEventListener('gesturestart', function (e) {
+        // 禁用所有可能引起缩放的手势和事件
+        document.addEventListener('gesturestart', function(e) {
             e.preventDefault();
         });
-        document.addEventListener('gesturechange', function (e) {
+        
+        document.addEventListener('gesturechange', function(e) {
             e.preventDefault();
         });
-        document.addEventListener('gestureend', function (e) {
+        
+        document.addEventListener('gestureend', function(e) {
             e.preventDefault();
         });
+        
+        // 禁用双指缩放
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+        
+        document.addEventListener('touchmove', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+        
+        // 禁用双击缩放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
 
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -139,11 +280,13 @@
                 // 禁用按鈕，顯示處理中
                 cropButton.disabled = true;
                 loader.style.display = 'block';
+                successMessage.style.display = 'none';
 
                 // 釋放之前的 ObjectURL
                 if (currentImageUrl) {
                     URL.revokeObjectURL(currentImageUrl);
                 }
+                
                 // 創建新圖片的 ObjectURL
                 currentImageUrl = URL.createObjectURL(file);
                 image.src = currentImageUrl;
@@ -160,9 +303,9 @@
                     cropper = new Cropper(image, {
                         aspectRatio: 1,
                         viewMode: 1,
-                        zoomable: false, // 禁用縮放
-                        zoomOnTouch: false, // 禁用觸控縮放
-                        zoomOnWheel: false, // 禁用滾輪縮放
+                        zoomable: false,
+                        zoomOnTouch: false,
+                        zoomOnWheel: false,
                         movable: true,
                         rotatable: false,
                         scalable: false,
@@ -170,7 +313,6 @@
                         ready: () => {
                             console.log('Cropper 已初始化');
                             cropButton.disabled = false;
-                            cropButton.textContent = '裁切圖片';
                             loader.style.display = 'none';
                         }
                     });
@@ -182,32 +324,17 @@
             } else {
                 alert('請選擇有效的圖片檔案');
                 cropButton.disabled = false;
-                cropButton.textContent = '裁切圖片';
                 loader.style.display = 'none';
             }
         });
 
-        // 阻止圖片區域的滾輪和觸控縮放事件
+        // 阻止圖片區域的所有縮放事件
         image.addEventListener('wheel', (e) => {
             e.preventDefault();
             e.stopPropagation();
             return false;
         }, { passive: false });
         
-        image.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 1) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        }, { passive: false });
-        
-        image.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 1) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        }, { passive: false });
-
         function cropImage() {
             if (!cropper) {
                 alert('請先上傳圖片');
@@ -215,7 +342,6 @@
             }
 
             cropButton.disabled = true;
-            cropButton.textContent = '裁切中...';
             loader.style.display = 'block';
 
             // 使用setTimeout確保UI有時間更新
@@ -232,17 +358,24 @@
                     context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
                     context.drawImage(croppedCanvas, 0, 0);
 
+                    // 顯示成功消息
+                    successMessage.style.display = 'block';
+                    
                     // 自動滾動到裁切結果
-                    resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setTimeout(() => {
+                        resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 300);
                 } else {
                     alert('裁切失敗，請重新選取區域');
                 }
 
                 cropButton.disabled = false;
-                cropButton.textContent = '裁切圖片';
                 loader.style.display = 'none';
             }, 100);
         }
+        
+        // 初始狀態
+        cropButton.disabled = true;
     </script>
 </body>
 </html>
