@@ -122,30 +122,35 @@
             }
         });
 
-function cropImage() {
-    if (!cropper) {
-        alert('請先上傳圖片');
-        return;
-    }
-    cropButton.disabled = true;
-    cropButton.textContent = '裁切中...';
-    const croppedCanvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
-    if (croppedCanvas) {
-        resultCanvas.width = croppedCanvas.width;
-        resultCanvas.height = croppedCanvas.height;
-        const context = resultCanvas.getContext('2d');
-        context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-        context.drawImage(croppedCanvas, 0, 0);
-        const link = document.createElement('a');
-        link.href = croppedCanvas.toDataURL('image/jpeg', 0.8);
-        link.download = 'cropped_image.jpg';
-        link.click();
-    } else {
-        alert('裁切失敗，請重新選取區域');
-    }
-    cropButton.disabled = false;
-    cropButton.textContent = '裁切圖片';
-}
+        function cropImage() {
+            if (!cropper) {
+                alert('請先上傳圖片');
+                return;
+            }
+
+            // 禁用按鈕，顯示裁切中
+            cropButton.disabled = true;
+            cropButton.textContent = '裁切中...';
+
+            const croppedCanvas = cropper.getCroppedCanvas({
+                width: 300,
+                height: 300,
+            });
+
+            if (croppedCanvas) {
+                resultCanvas.width = croppedCanvas.width;
+                resultCanvas.height = croppedCanvas.height;
+                const context = resultCanvas.getContext('2d');
+                context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+                context.drawImage(croppedCanvas, 0, 0);
+            } else {
+                alert('裁切失敗，請重新選取區域');
+            }
+
+            // 恢復按鈕
+            cropButton.disabled = false;
+            cropButton.textContent = '裁切圖片';
+        }
     </script>
 </body>
 </html>
