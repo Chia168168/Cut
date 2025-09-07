@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/heic2canvas@1.0.0/dist/heic2canvas.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>網頁圖片裁切工具</title>
@@ -101,41 +102,64 @@
     let isDragging = false;
     let startX, startY;
     let cropperRect = {};
-    let isMobile = 'ontouchstart' in window; // 判斷是否為觸控裝置
-
-    // 監聽圖片上傳
-    imageUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                mainImage.src = event.target.result;
-                mainImage.style.display = 'block';
-                cropperBox.style.display = 'none'; // 重設裁切框
-                cropButton.disabled = false;
-                croppedImageContainer.style.display = 'none';
-            };
-            reader.readAsDataURL(file);
-        }
-    });
+    let isMobile = 'ontouchstart' in window;
+    let originalImage = new Image(); // 用來保存解碼後的圖片物件
 
     // 獲取事件座標，同時支援滑鼠和觸控
     function getCoords(e) {
         if (isMobile) {
-            // 觸控事件
             const touch = e.touches[0];
             return {
                 x: touch.clientX - container.getBoundingClientRect().left,
                 y: touch.clientY - container.getBoundingClientRect().top
             };
         } else {
-            // 滑鼠事件
             return {
                 x: e.offsetX,
                 y: e.offsetY
             };
         }
     }
+
+    // 處理圖片載入邏輯 (包含 HEIC/HEIF)
+    imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // 檢查檔案類型
+        if (file.type === 'image/heic' || file.type === 'image/heif') {
+            heic2canvas(file, {
+                // 選項: 提供檔案名稱以便除錯
+                oncomplete: (heicCanvas) => {
+                    originalImage.src = heicCanvas.toDataURL('image/png');
+                    originalImage.onload = () => {
+                        mainImage.src = originalImage.src;
+                        mainImage.style.display = 'block';
+                        cropperBox.style.display = 'none';
+                        cropButton.disabled = false;
+                        croppedImageContainer.style.display = 'none';
+                    };
+                },
+                onerror: (err) => {
+                    alert('無法處理 HEIC/HEIF 檔案，請嘗試其他格式。');
+                    console.error('HEIC2Canvas Error:', err);
+                }
+            });
+        } else {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                originalImage.src = event.target.result;
+                originalImage.onload = () => {
+                    mainImage.src = originalImage.src;
+                    mainImage.style.display = 'block';
+                    cropperBox.style.display = 'none';
+                    cropButton.disabled = false;
+                    croppedImageContainer.style.display = 'none';
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 
     // 事件監聽器：同時支援滑鼠和觸控
     container.addEventListener(isMobile ? 'touchstart' : 'mousedown', (e) => {
@@ -156,7 +180,7 @@
     container.addEventListener(isMobile ? 'touchmove' : 'mousemove', (e) => {
         if (!isDragging || mainImage.style.display !== 'block') return;
 
-        e.preventDefault(); // 防止手機畫面滾動
+        e.preventDefault();
         const coords = getCoords(e);
         const currentX = coords.x;
         const currentY = coords.y;
@@ -183,37 +207,34 @@
         isDragging = false;
     });
 
-    // 裁切按鈕點擊事件 (此部分無需修改，維持不變)
+    // 裁切按鈕點擊事件 (此部分有小幅修改，以使用 originalImage)
     cropButton.addEventListener('click', () => {
-        if (!mainImage.src || !cropperRect.width || !cropperRect.height) {
+        if (!originalImage.src || !cropperRect.width || !cropperRect.height) {
             alert('請先選擇圖片並框選裁切區域！');
             return;
         }
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.src = mainImage.src;
+        
+        const imgRatio = originalImage.naturalWidth / mainImage.width;
 
-        img.onload = () => {
-            const imgRatio = img.naturalWidth / mainImage.width;
+        const cropX = cropperRect.x * imgRatio;
+        const cropY = cropperRect.y * imgRatio;
+        const cropWidth = cropperRect.width * imgRatio;
+        const cropHeight = cropperRect.height * imgRatio;
 
-            const cropX = cropperRect.x * imgRatio;
-            const cropY = cropperRect.y * imgRatio;
-            const cropWidth = cropperRect.width * imgRatio;
-            const cropHeight = cropperRect.height * imgRatio;
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
 
-            canvas.width = cropWidth;
-            canvas.height = cropHeight;
+        ctx.drawImage(originalImage, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
-            ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-
-            const croppedDataUrl = canvas.toDataURL('image/png');
-            croppedImage.src = croppedDataUrl;
-            croppedImageContainer.style.display = 'block';
-        };
+        const croppedDataUrl = canvas.toDataURL('image/png');
+        croppedImage.src = croppedDataUrl;
+        croppedImageContainer.style.display = 'block';
     });
 </script>
+
 
 </body>
 </html>
