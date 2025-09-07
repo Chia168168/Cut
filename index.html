@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>網頁圖片裁切工具 v1.1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>網頁圖片裁切工具 v1.2</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <style>
         body {
@@ -49,9 +49,11 @@
         }
         #image {
             max-width: 100%;
+            max-height: 50vh; /* 限制圖片高度，減少滾動需求 */
             height: auto;
             display: block;
             margin: 0 auto;
+            touch-action: pan-y; /* 允許垂直滾動，禁用縮放 */
         }
         #resultContainer {
             max-width: 100%;
@@ -71,7 +73,7 @@
     </style>
 </head>
 <body>
-    <h1>網頁圖片裁切工具 v1.1</h1>
+    <h1>網頁圖片裁切工具 v1.2</h1>
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
     <button id="cropButton" onclick="cropImage()">裁切圖片</button>
     <div id="imageContainer">
@@ -118,7 +120,9 @@
                 cropper = new Cropper(image, {
                     aspectRatio: 1,
                     viewMode: 1,
-                    zoomable: false, // 禁用縮放，防止滾動時放大
+                    zoomable: false, // 禁用縮放
+                    zoomOnTouch: false, // 禁用觸控縮放
+                    zoomOnWheel: false, // 禁用滾輪縮放
                     ready: () => {
                         console.log('Cropper 已初始化');
                         cropButton.disabled = false;
@@ -135,6 +139,12 @@
                 cropButton.textContent = '裁切圖片';
             }
         });
+
+        // 阻止圖片區域的滾輪和觸控縮放事件
+        image.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+        image.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) e.preventDefault(); // 阻止雙指縮放
+        }, { passive: false });
 
         function cropImage() {
             if (!cropper) {
