@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>網頁圖片裁切工具 (完整版)</title>
+    <title>網頁圖片裁切工具 (最終版)</title>
     <style>
         body {
             font-family: sans-serif;
@@ -138,40 +138,46 @@
             if (!file) return;
 
             // 重置狀態
-            mainImage.src = '';
             mainImage.style.display = 'none';
             cropperBox.style.display = 'none';
             cropButton.disabled = true;
             croppedImageContainer.style.display = 'none';
             originalImage = null;
-            dragInfo.style.display = 'none';
+            dragInfo.style.display = 'flex';
+            
+            const reader = new FileReader();
 
+            // HEIC/HEIF 處理
             if (file.type === 'image/heic' || file.type === 'image/heif') {
-                file.arrayBuffer().then(buffer => {
-                    const primaryImage = decoder.decode(buffer);
-                    const imageBlob = new Blob([primaryImage.data], { type: 'image/jpeg' });
-                    const imageUrl = URL.createObjectURL(imageBlob);
+                reader.onload = (e) => {
+                    const buffer = e.target.result;
+                    try {
+                        const primaryImage = decoder.decode(buffer);
+                        const imageBlob = new Blob([primaryImage.data], { type: 'image/jpeg' });
+                        const imageUrl = URL.createObjectURL(imageBlob);
 
-                    originalImage = new Image();
-                    originalImage.src = imageUrl;
-                    originalImage.onload = () => {
-                        mainImage.src = originalImage.src;
-                        mainImage.style.display = 'block';
-                        cropButton.disabled = false;
-                        URL.revokeObjectURL(imageUrl); // 釋放記憶體
-                    };
-
-                    originalImage.onerror = () => {
-                        alert('HEIC 圖片載入失敗，可能檔案已損壞或格式不受支援。');
-                        URL.revokeObjectURL(imageUrl);
-                    };
-
-                }).catch(err => {
-                    alert('無法處理 HEIC/HEIF 檔案，請嘗試其他格式。');
-                    console.error('HEIF decoding error:', err);
-                });
+                        originalImage = new Image();
+                        originalImage.onload = () => {
+                            mainImage.src = imageUrl;
+                            mainImage.style.display = 'block';
+                            cropButton.disabled = false;
+                            dragInfo.style.display = 'none';
+                            URL.revokeObjectURL(imageUrl); // 釋放記憶體
+                        };
+                        originalImage.onerror = () => {
+                            alert('HEIC 圖片載入失敗，可能檔案已損壞或格式不受支援。');
+                            URL.revokeObjectURL(imageUrl);
+                        };
+                        originalImage.src = imageUrl;
+                    } catch (err) {
+                        alert('無法處理 HEIC/HEIF 檔案，請嘗試其他格式。');
+                        console.error('HEIF decoding error:', err);
+                        dragInfo.style.display = 'flex';
+                    }
+                };
+                reader.readAsArrayBuffer(file);
             } else {
-                const reader = new FileReader();
+                // 其他圖片格式處理
                 reader.onload = (event) => {
                     originalImage = new Image();
                     originalImage.src = event.target.result;
@@ -179,6 +185,7 @@
                         mainImage.src = originalImage.src;
                         mainImage.style.display = 'block';
                         cropButton.disabled = false;
+                        dragInfo.style.display = 'none';
                     };
                 };
                 reader.readAsDataURL(file);
