@@ -3,22 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>網頁圖片裁切工具 - 增強版</title>
+    <title>網頁圖片裁切工具 - 修復版</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #e4efe9 100%);
             color: #2c3e50;
             line-height: 1.6;
             padding: 20px;
             min-height: 100vh;
+            touch-action: manipulation;
         }
         
         .container {
@@ -58,6 +63,7 @@
             border-radius: 12px;
             background: #f8fafc;
             transition: all 0.3s;
+            cursor: pointer;
         }
         
         .upload-area:hover {
@@ -158,6 +164,8 @@
             max-width: 100%;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: none; /* 初始隐藏 */
+            margin: 0 auto;
         }
         
         .instructions {
@@ -220,6 +228,24 @@
             100% { transform: rotate(360deg); }
         }
         
+        .download-btn {
+            display: none;
+            margin: 20px auto;
+            padding: 12px 24px;
+            background: linear-gradient(to right, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
@@ -243,7 +269,7 @@
     <div class="container">
         <header>
             <h1>網頁圖片裁切工具</h1>
-            <p class="subtitle">增強版 - 支持移動設備</p>
+            <p class="subtitle">修復版 - 裁切結果正常顯示</p>
         </header>
         
         <div class="instructions">
@@ -257,7 +283,7 @@
             </ol>
         </div>
         
-        <div class="upload-area">
+        <div class="upload-area" id="uploadArea">
             <input type="file" id="imageInput" class="file-input" accept="image/jpeg,image/png,image/heic,image/heif">
             <label for="imageInput" class="file-label">選擇圖片</label>
             <p>支持 JPG、PNG 和 HEIC 格式</p>
@@ -271,6 +297,7 @@
         
         <div class="controls">
             <button id="cropButton" class="btn btn-primary" disabled>裁切圖片</button>
+            <button id="resetButton" class="btn" disabled>重置</button>
         </div>
         
         <div class="loader" id="loader"></div>
@@ -278,115 +305,206 @@
         <div class="result-container">
             <h3 class="result-title">裁切結果</h3>
             <canvas id="result"></canvas>
+            <button id="downloadButton" class="download-btn">下載裁切結果</button>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
+        // 全局變量
         let cropper = null;
         let currentImageUrl = null;
-        const input = document.getElementById('imageInput');
+        
+        // 獲取DOM元素
+        const imageInput = document.getElementById('imageInput');
         const image = document.getElementById('image');
-        const resultCanvas = document.getElementById('result');
         const cropButton = document.getElementById('cropButton');
+        const resetButton = document.getElementById('resetButton');
+        const resultCanvas = document.getElementById('result');
         const loader = document.getElementById('loader');
         const statusMessage = document.getElementById('statusMessage');
-
-        input.addEventListener('change', (event) => {
+        const uploadArea = document.getElementById('uploadArea');
+        const downloadButton = document.getElementById('downloadButton');
+        
+        // 初始化
+        function init() {
+            // 設置事件監聽器
+            imageInput.addEventListener('change', handleImageUpload);
+            cropButton.addEventListener('click', cropImage);
+            resetButton.addEventListener('click', resetCropper);
+            uploadArea.addEventListener('click', () => imageInput.click());
+            downloadButton.addEventListener('click', downloadResult);
+            
+            // 初始狀態
+            updateStatus('請選擇要裁切的圖片', 'info');
+        }
+        
+        // 處理圖片上傳
+        function handleImageUpload(event) {
             const file = event.target.files[0];
-            if (file) {
-                // 顯示載入狀態
-                cropButton.disabled = true;
-                loader.style.display = 'block';
-                updateStatus('圖片載入中...', 'info');
-                
-                // 釋放之前的 ObjectURL
-                if (currentImageUrl) {
-                    URL.revokeObjectURL(currentImageUrl);
-                }
-                
-                // 創建新圖片的 ObjectURL
-                currentImageUrl = URL.createObjectURL(file);
-                image.src = currentImageUrl;
-
-                // 銷毀舊的 Cropper 實例
-                if (cropper) {
-                    cropper.destroy();
-                    cropper = null;
-                }
-
-                // 圖片載入後初始化 Cropper
-                image.onload = function() {
-                    // 初始化新的 Cropper 實例
-                    cropper = new Cropper(image, {
-                        aspectRatio: 1,
-                        viewMode: 1,
-                        ready: () => {
-                            console.log('Cropper 已初始化');
-                            cropButton.disabled = false;
-                            loader.style.display = 'none';
-                            updateStatus('圖片載入成功！請調整裁切區域', 'success');
-                        }
-                    });
-                };
-                
-                // 圖片載入錯誤處理
-                image.onerror = function() {
-                    updateStatus('圖片載入失敗，請嘗試其他圖片', 'error');
-                    loader.style.display = 'none';
-                };
-                
-                // 清空裁切結果
-                const context = resultCanvas.getContext('2d');
-                context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-            } else {
-                alert('請選擇有效的圖片檔案');
-            }
-        });
-
-        function cropImage() {
-            if (!cropper) {
-                alert('請先上傳圖片');
+            if (!file) return;
+            
+            // 檢查是否為圖片文件
+            if (!file.type.match('image.*')) {
+                updateStatus('請選擇圖片文件 (JPG, PNG, HEIC)', 'error');
                 return;
             }
-
-            // 顯示載入狀態
+            
+            updateStatus('圖片載入中...', 'info');
             cropButton.disabled = true;
+            resetButton.disabled = true;
             loader.style.display = 'block';
+            
+            // 釋放之前的URL
+            if (currentImageUrl) {
+                URL.revokeObjectURL(currentImageUrl);
+            }
+            
+            // 創建新圖片的URL
+            currentImageUrl = URL.createObjectURL(file);
+            
+            // 設置圖片源
+            image.onload = function() {
+                initCropper();
+                updateStatus('圖片載入成功！請調整裁切區域', 'success');
+                loader.style.display = 'none';
+                cropButton.disabled = false;
+                resetButton.disabled = false;
+                
+                // 隱藏下載按鈕和結果
+                downloadButton.style.display = 'none';
+                resultCanvas.style.display = 'none';
+            };
+            
+            image.onerror = function() {
+                updateStatus('圖片載入失敗，請嘗試其他圖片', 'error');
+                loader.style.display = 'none';
+            };
+            
+            image.src = currentImageUrl;
+        }
+        
+        // 初始化Cropper
+        function initCropper() {
+            // 銷毀現有的Cropper實例
+            if (cropper) {
+                cropper.destroy();
+            }
+            
+            // 初始化Cropper
+            cropper = new Cropper(image, {
+                viewMode: 1,
+                dragMode: 'move',
+                aspectRatio: 1,
+                autoCropArea: 0.8,
+                restore: false,
+                guides: true,
+                center: true,
+                highlight: false,
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                toggleDragModeOnDblclick: false,
+                // 禁用所有縮放相關功能
+                zoomable: false,
+                zoomOnTouch: false,
+                zoomOnWheel: false,
+                scalable: false,
+                rotatable: false
+            });
+        }
+        
+        // 裁切圖片
+        function cropImage() {
+            if (!cropper) {
+                updateStatus('請先上傳圖片', 'error');
+                return;
+            }
+            
             updateStatus('裁切中...', 'info');
-
-            // 使用setTimeout確保UI有時間更新
+            cropButton.disabled = true;
+            resetButton.disabled = true;
+            loader.style.display = 'block';
+            
+            // 使用setTimeout確保UI更新
             setTimeout(() => {
-                // 獲取裁切後的畫布
-                const croppedCanvas = cropper.getCroppedCanvas({
-                    width: 300,
-                    height: 300,
-                });
-
-                if (croppedCanvas) {
-                    // 將裁切結果顯示在現有 canvas 上
-                    resultCanvas.width = croppedCanvas.width;
-                    resultCanvas.height = croppedCanvas.height;
-                    const context = resultCanvas.getContext('2d');
-                    context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-                    context.drawImage(croppedCanvas, 0, 0);
+                try {
+                    // 獲取裁切後的Canvas
+                    const croppedCanvas = cropper.getCroppedCanvas({
+                        width: 300,
+                        height: 300,
+                        imageSmoothingEnabled: true,
+                        imageSmoothingQuality: 'high'
+                    });
                     
-                    updateStatus('圖片裁切成功！', 'success');
-                    
-                    // 自動滾動到結果
-                    setTimeout(() => {
-                        document.querySelector('.result-container').scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }, 300);
-                } else {
-                    updateStatus('裁切失敗，請重新選取區域', 'error');
+                    // 顯示結果
+                    if (croppedCanvas) {
+                        resultCanvas.width = croppedCanvas.width;
+                        resultCanvas.height = croppedCanvas.height;
+                        const ctx = resultCanvas.getContext('2d');
+                        ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+                        ctx.drawImage(croppedCanvas, 0, 0);
+                        
+                        // 顯示結果Canvas和下載按鈕
+                        resultCanvas.style.display = 'block';
+                        downloadButton.style.display = 'block';
+                        
+                        updateStatus('圖片裁切成功！', 'success');
+                        
+                        // 滾動到結果區域
+                        setTimeout(() => {
+                            document.querySelector('.result-container').scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }, 300);
+                    } else {
+                        updateStatus('裁切失敗，請重新嘗試', 'error');
+                    }
+                } catch (error) {
+                    console.error('裁切錯誤:', error);
+                    updateStatus('裁切過程中發生錯誤', 'error');
                 }
                 
+                // 恢復按鈕狀態
                 cropButton.disabled = false;
+                resetButton.disabled = false;
                 loader.style.display = 'none';
             }, 100);
+        }
+        
+        // 重置Cropper
+        function resetCropper() {
+            if (cropper) {
+                cropper.reset();
+                updateStatus('已重置裁切區域', 'info');
+                
+                // 隱藏結果和下載按鈕
+                resultCanvas.style.display = 'none';
+                downloadButton.style.display = 'none';
+                
+                // 清空結果Canvas
+                const ctx = resultCanvas.getContext('2d');
+                ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            }
+        }
+        
+        // 下載裁切結果
+        function downloadResult() {
+            if (resultCanvas.width === 0 || resultCanvas.height === 0) {
+                updateStatus('沒有可下載的裁切結果', 'error');
+                return;
+            }
+            
+            try {
+                const link = document.createElement('a');
+                link.download = 'cropped-image.png';
+                link.href = resultCanvas.toDataURL('image/png');
+                link.click();
+                updateStatus('圖片下載成功！', 'success');
+            } catch (error) {
+                console.error('下載錯誤:', error);
+                updateStatus('下載過程中發生錯誤', 'error');
+            }
         }
         
         // 更新狀態消息
@@ -395,8 +513,8 @@
             statusMessage.className = 'status ' + type;
         }
         
-        // 初始狀態
-        cropButton.disabled = true;
+        // 頁面載入時初始化
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
