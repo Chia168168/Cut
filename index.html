@@ -89,114 +89,131 @@
         <img id="cropped-image" alt="裁切後的圖片">
     </div>
     
-    <script>
-        const imageUpload = document.getElementById('image-upload');
-        const mainImage = document.getElementById('main-image');
-        const container = document.querySelector('.container');
-        const cropperBox = document.querySelector('.cropper-box');
-        const cropButton = document.getElementById('crop-button');
-        const croppedImageContainer = document.getElementById('cropped-image-container');
-        const croppedImage = document.getElementById('cropped-image');
+<script>
+    const imageUpload = document.getElementById('image-upload');
+    const mainImage = document.getElementById('main-image');
+    const container = document.querySelector('.container');
+    const cropperBox = document.querySelector('.cropper-box');
+    const cropButton = document.getElementById('crop-button');
+    const croppedImageContainer = document.getElementById('cropped-image-container');
+    const croppedImage = document.getElementById('cropped-image');
 
-        let isDragging = false;
-        let startX, startY;
-        let cropperRect = {};
+    let isDragging = false;
+    let startX, startY;
+    let cropperRect = {};
+    let isMobile = 'ontouchstart' in window; // 判斷是否為觸控裝置
 
-        // 監聽圖片上傳
-        imageUpload.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    mainImage.src = event.target.result;
-                    mainImage.style.display = 'block';
-                    cropperBox.style.display = 'none'; // 重設裁切框
-                    cropButton.disabled = false;
-                    croppedImageContainer.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // 鼠標在圖片容器上按下
-        container.addEventListener('mousedown', (e) => {
-            if (mainImage.style.display !== 'block') return;
-            
-            isDragging = true;
-            startX = e.offsetX;
-            startY = e.offsetY;
-
-            // 顯示並初始化裁切框
-            cropperBox.style.display = 'block';
-            cropperBox.style.left = `${startX}px`;
-            cropperBox.style.top = `${startY}px`;
-            cropperBox.style.width = '0px';
-            cropperBox.style.height = '0px';
-        });
-
-        // 鼠標在圖片容器上移動
-        container.addEventListener('mousemove', (e) => {
-            if (!isDragging || mainImage.style.display !== 'block') return;
-
-            const currentX = e.offsetX;
-            const currentY = e.offsetY;
-
-            const width = Math.abs(currentX - startX);
-            const height = Math.abs(currentY - startY);
-            const newLeft = Math.min(currentX, startX);
-            const newTop = Math.min(currentY, startY);
-
-            cropperBox.style.left = `${newLeft}px`;
-            cropperBox.style.top = `${newTop}px`;
-            cropperBox.style.width = `${width}px`;
-            cropperBox.style.height = `${height}px`;
-
-            cropperRect = {
-                x: newLeft,
-                y: newTop,
-                width: width,
-                height: height
+    // 監聽圖片上傳
+    imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                mainImage.src = event.target.result;
+                mainImage.style.display = 'block';
+                cropperBox.style.display = 'none'; // 重設裁切框
+                cropButton.disabled = false;
+                croppedImageContainer.style.display = 'none';
             };
-        });
+            reader.readAsDataURL(file);
+        }
+    });
 
-        // 鼠標在圖片容器上鬆開
-        container.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        // 裁切按鈕點擊事件
-        cropButton.addEventListener('click', () => {
-            if (!mainImage.src || !cropperRect.width || !cropperRect.height) {
-                alert('請先選擇圖片並框選裁切區域！');
-                return;
-            }
-
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.src = mainImage.src;
-
-            img.onload = () => {
-                const imgRatio = img.naturalWidth / mainImage.width;
-
-                // 根據圖片的實際尺寸和顯示尺寸比例，計算裁切區域在原始圖片上的座標和尺寸
-                const cropX = cropperRect.x * imgRatio;
-                const cropY = cropperRect.y * imgRatio;
-                const cropWidth = cropperRect.width * imgRatio;
-                const cropHeight = cropperRect.height * imgRatio;
-
-                canvas.width = cropWidth;
-                canvas.height = cropHeight;
-
-                // 將選定區域繪製到 canvas
-                ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-
-                // 將 canvas 內容轉換為圖片 URL
-                const croppedDataUrl = canvas.toDataURL('image/png');
-                croppedImage.src = croppedDataUrl;
-                croppedImageContainer.style.display = 'block';
+    // 獲取事件座標，同時支援滑鼠和觸控
+    function getCoords(e) {
+        if (isMobile) {
+            // 觸控事件
+            const touch = e.touches[0];
+            return {
+                x: touch.clientX - container.getBoundingClientRect().left,
+                y: touch.clientY - container.getBoundingClientRect().top
             };
-        });
-    </script>
+        } else {
+            // 滑鼠事件
+            return {
+                x: e.offsetX,
+                y: e.offsetY
+            };
+        }
+    }
+
+    // 事件監聽器：同時支援滑鼠和觸控
+    container.addEventListener(isMobile ? 'touchstart' : 'mousedown', (e) => {
+        if (mainImage.style.display !== 'block') return;
+        
+        isDragging = true;
+        const coords = getCoords(e);
+        startX = coords.x;
+        startY = coords.y;
+
+        cropperBox.style.display = 'block';
+        cropperBox.style.left = `${startX}px`;
+        cropperBox.style.top = `${startY}px`;
+        cropperBox.style.width = '0px';
+        cropperBox.style.height = '0px';
+    });
+
+    container.addEventListener(isMobile ? 'touchmove' : 'mousemove', (e) => {
+        if (!isDragging || mainImage.style.display !== 'block') return;
+
+        e.preventDefault(); // 防止手機畫面滾動
+        const coords = getCoords(e);
+        const currentX = coords.x;
+        const currentY = coords.y;
+
+        const width = Math.abs(currentX - startX);
+        const height = Math.abs(currentY - startY);
+        const newLeft = Math.min(currentX, startX);
+        const newTop = Math.min(currentY, startY);
+
+        cropperBox.style.left = `${newLeft}px`;
+        cropperBox.style.top = `${newTop}px`;
+        cropperBox.style.width = `${width}px`;
+        cropperBox.style.height = `${height}px`;
+
+        cropperRect = {
+            x: newLeft,
+            y: newTop,
+            width: width,
+            height: height
+        };
+    });
+
+    container.addEventListener(isMobile ? 'touchend' : 'mouseup', () => {
+        isDragging = false;
+    });
+
+    // 裁切按鈕點擊事件 (此部分無需修改，維持不變)
+    cropButton.addEventListener('click', () => {
+        if (!mainImage.src || !cropperRect.width || !cropperRect.height) {
+            alert('請先選擇圖片並框選裁切區域！');
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.src = mainImage.src;
+
+        img.onload = () => {
+            const imgRatio = img.naturalWidth / mainImage.width;
+
+            const cropX = cropperRect.x * imgRatio;
+            const cropY = cropperRect.y * imgRatio;
+            const cropWidth = cropperRect.width * imgRatio;
+            const cropHeight = cropperRect.height * imgRatio;
+
+            canvas.width = cropWidth;
+            canvas.height = cropHeight;
+
+            ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+            const croppedDataUrl = canvas.toDataURL('image/png');
+            croppedImage.src = croppedDataUrl;
+            croppedImageContainer.style.display = 'block';
+        };
+    });
+</script>
+
 </body>
 </html>
