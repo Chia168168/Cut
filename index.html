@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>網頁圖片裁切工具 v1.2</title>
+    <title>網頁圖片裁切工具 v1.3</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <style>
         body {
@@ -12,6 +12,11 @@
             margin: 0 auto;
             padding: 20px;
             box-sizing: border-box;
+            /* 防止整個頁面縮放 */
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         h1 {
             font-size: 1.8em;
@@ -46,14 +51,19 @@
             max-width: 100%;
             margin: 20px 0;
             text-align: center;
+            /* 防止容器縮放 */
+            overflow: hidden;
+            touch-action: none;
         }
         #image {
             max-width: 100%;
-            max-height: 50vh; /* 限制圖片高度，減少滾動需求 */
+            max-height: 50vh;
             height: auto;
             display: block;
             margin: 0 auto;
-            touch-action: pan-y; /* 允許垂直滾動，禁用縮放 */
+            /* 防止圖片縮放 */
+            touch-action: none;
+            -webkit-user-drag: none;
         }
         #resultContainer {
             max-width: 100%;
@@ -70,12 +80,28 @@
             text-align: center;
             font-size: 1.1em;
         }
+        /* 添加載入指示器 */
+        .loader {
+            display: none;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <h1>網頁圖片裁切工具 v1.2</h1>
+    <h1>網頁圖片裁切工具 v1.3</h1>
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,image/heif">
     <button id="cropButton" onclick="cropImage()">裁切圖片</button>
+    <div class="loader" id="loader"></div>
     <div id="imageContainer">
         <p>上傳圖片後，拖曳滑鼠或手指來選取區域</p>
         <img id="image" style="max-width: 100%;">
@@ -94,13 +120,25 @@
         const resultCanvas = document.getElementById('result');
         const cropButton = document.getElementById('cropButton');
         const resultContainer = document.getElementById('resultContainer');
+        const loader = document.getElementById('loader');
+
+        // 禁用雙指縮放和手勢
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function (e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function (e) {
+            e.preventDefault();
+        });
 
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
                 // 禁用按鈕，顯示處理中
                 cropButton.disabled = true;
-                cropButton.textContent = '處理中...';
+                loader.style.display = 'block';
 
                 // 釋放之前的 ObjectURL
                 if (currentImageUrl) {
@@ -116,20 +154,28 @@
                     cropper = null;
                 }
 
-                // 初始化新的 Cropper 實例
-                cropper = new Cropper(image, {
-                    aspectRatio: 1,
-                    viewMode: 1,
-                    zoomable: false, // 禁用縮放
-                    zoomOnTouch: false, // 禁用觸控縮放
-                    zoomOnWheel: false, // 禁用滾輪縮放
-                    ready: () => {
-                        console.log('Cropper 已初始化');
-                        cropButton.disabled = false;
-                        cropButton.textContent = '裁切圖片';
-                    }
-                });
-
+                // 圖片載入後初始化 Cropper
+                image.onload = function() {
+                    // 初始化新的 Cropper 實例
+                    cropper = new Cropper(image, {
+                        aspectRatio: 1,
+                        viewMode: 1,
+                        zoomable: false, // 禁用縮放
+                        zoomOnTouch: false, // 禁用觸控縮放
+                        zoomOnWheel: false, // 禁用滾輪縮放
+                        movable: true,
+                        rotatable: false,
+                        scalable: false,
+                        toggleDragModeOnDblclick: false,
+                        ready: () => {
+                            console.log('Cropper 已初始化');
+                            cropButton.disabled = false;
+                            cropButton.textContent = '裁切圖片';
+                            loader.style.display = 'none';
+                        }
+                    });
+                };
+                
                 // 清空裁切結果
                 const context = resultCanvas.getContext('2d');
                 context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
@@ -137,13 +183,29 @@
                 alert('請選擇有效的圖片檔案');
                 cropButton.disabled = false;
                 cropButton.textContent = '裁切圖片';
+                loader.style.display = 'none';
             }
         });
 
         // 阻止圖片區域的滾輪和觸控縮放事件
-        image.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+        image.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, { passive: false });
+        
+        image.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, { passive: false });
+        
         image.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 1) e.preventDefault(); // 阻止雙指縮放
+            if (e.touches.length > 1) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
         }, { passive: false });
 
         function cropImage() {
@@ -154,27 +216,32 @@
 
             cropButton.disabled = true;
             cropButton.textContent = '裁切中...';
+            loader.style.display = 'block';
 
-            const croppedCanvas = cropper.getCroppedCanvas({
-                width: 300,
-                height: 300,
-            });
+            // 使用setTimeout確保UI有時間更新
+            setTimeout(() => {
+                const croppedCanvas = cropper.getCroppedCanvas({
+                    width: 300,
+                    height: 300,
+                });
 
-            if (croppedCanvas) {
-                resultCanvas.width = croppedCanvas.width;
-                resultCanvas.height = croppedCanvas.height;
-                const context = resultCanvas.getContext('2d');
-                context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-                context.drawImage(croppedCanvas, 0, 0);
+                if (croppedCanvas) {
+                    resultCanvas.width = croppedCanvas.width;
+                    resultCanvas.height = croppedCanvas.height;
+                    const context = resultCanvas.getContext('2d');
+                    context.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+                    context.drawImage(croppedCanvas, 0, 0);
 
-                // 自動滾動到裁切結果
-                resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                alert('裁切失敗，請重新選取區域');
-            }
+                    // 自動滾動到裁切結果
+                    resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    alert('裁切失敗，請重新選取區域');
+                }
 
-            cropButton.disabled = false;
-            cropButton.textContent = '裁切圖片';
+                cropButton.disabled = false;
+                cropButton.textContent = '裁切圖片';
+                loader.style.display = 'none';
+            }, 100);
         }
     </script>
 </body>
