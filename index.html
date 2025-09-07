@@ -170,14 +170,14 @@
             
             <div class="setting-group">
                 <label for="widthInput">輸出寬度 (px)</label>
-                <input type="number" id="widthInput" class="size-input" value="300" min="50" max="4000">
+                <input type="number" id="widthInput" class="size-input" value="1024" min="50" max="4000">
             </div>
             
             <div class="setting-group">
                 <label for="heightInput">輸出高度 (px)</label>
                 <div class="dimension-inputs">
-                    <input type="number" id="heightInput" class="size-input" value="300" min="50" max="4000">
-                    <div id="lockAspect" class="lock-aspect" title="鎖定比例">🔒</div>
+                    <input type="number" id="heightInput" class="size-input" value="1024" min="50" max="4000">
+                    <div id="lockAspect" class="lock-aspect active" title="鎖定比例">🔒</div>
                 </div>
             </div>
             
@@ -191,8 +191,8 @@
             </div>
             
             <div class="setting-group">
-                <label for="qualitySlider">輸出品質: <span id="qualityValue" class="quality-value">90%</span></label>
-                <input type="range" id="qualitySlider" class="quality-slider" min="10" max="100" value="90">
+                <label for="qualitySlider">輸出品質: <span id="qualityValue" class="quality-value">100%</span></label>
+                <input type="range" id="qualitySlider" class="quality-slider" min="10" max="100" value="100">
                 <div style="display: flex; justify-content: space-between; font-size: 12px; color: #777;">
                     <span>低</span>
                     <span>高</span>
@@ -223,8 +223,9 @@
         let cropper = null;
         let currentImageUrl = null;
         let croppedImageDataUrl = null;
-        let isAspectLocked = false;
+        let isAspectLocked = true;
         let originalAspectRatio = 1;
+        let originalFileName = "";
         
         const input = document.getElementById('imageInput');
         const image = document.getElementById('image');
@@ -249,6 +250,9 @@
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (file) {
+                // 儲存原始檔案名稱
+                originalFileName = file.name.split('.').slice(0, -1).join('.');
+                
                 // 釋放之前的 ObjectURL
                 if (currentImageUrl) {
                     URL.revokeObjectURL(currentImageUrl);
@@ -270,7 +274,11 @@
                     ready: () => {
                         console.log('Cropper 已初始化');
                         // 儲存原始比例
-                        originalAspectRatio = getAspectRatio() || (cropper.getCropBoxData().width / cropper.getCropBoxData().height);
+                        const cropBoxData = cropper.getCropBoxData();
+                        originalAspectRatio = cropBoxData.width / cropBoxData.height;
+                        
+                        // 根據裁切區域比例更新高度
+                        updateHeightFromWidth();
                     }
                 });
 
@@ -292,10 +300,11 @@
                 cropper.setAspectRatio(ratio);
                 
                 // 更新鎖定狀態
-                if (ratio !== 0 && ratio !== NaN) {
+                if (ratio !== 0 && !isNaN(ratio)) {
                     isAspectLocked = true;
                     lockAspect.classList.add('active');
                     originalAspectRatio = ratio;
+                    updateHeightFromWidth();
                 } else {
                     isAspectLocked = false;
                     lockAspect.classList.remove('active');
@@ -356,8 +365,8 @@
             }
 
             // 獲取輸出尺寸
-            const outputWidth = parseInt(widthInput.value) || 300;
-            const outputHeight = parseInt(heightInput.value) || 300;
+            const outputWidth = parseInt(widthInput.value) || 1024;
+            const outputHeight = parseInt(heightInput.value) || 1024;
 
             // 獲取裁切後的畫布
             const croppedCanvas = cropper.getCroppedCanvas({
@@ -401,10 +410,17 @@
             const format = formatSelect.value;
             const extension = format === 'jpeg' ? 'jpg' : format;
             
+            // 獲取輸出尺寸
+            const outputWidth = parseInt(widthInput.value) || 1024;
+            const outputHeight = parseInt(heightInput.value) || 1024;
+            
+            // 創建檔案名稱：原檔名_crop_寬度x高度.副檔名
+            const downloadFileName = `${originalFileName}_crop_${outputWidth}x${outputHeight}.${extension}`;
+            
             // 創建下載鏈接
             const downloadLink = document.createElement('a');
             downloadLink.href = croppedImageDataUrl;
-            downloadLink.download = `cropped-image.${extension}`;
+            downloadLink.download = downloadFileName;
             
             // 模擬點擊下載鏈接
             document.body.appendChild(downloadLink);
